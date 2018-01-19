@@ -85,7 +85,7 @@ if __name__ == "__main__":
         ls = [ l.strip() for l in ls]
         test_flist = ls
 
-    num_channel = 1
+    num_channel = 3
     num_class = 11
     num_class_wo_fake = 10
     class_names = [ "Farmland", "Garden", "Woodland", "Grassland", "Building", "Road", "Structures", "DiggingPile", "Desert", "Waters", "Background"]
@@ -117,23 +117,23 @@ if __name__ == "__main__":
                                 normalize_val = 255).read_data_sets_from_flist( test_flist)
 
     
-    refinenet = model_DeepLab2.Refinenet( num_channel = 1,
+    refinenet = model_DeepLab2.DeepLabv2( num_channel = num_channel,
                  num_class = num_class, 
                  output_HW = ( 480,480),
                  is_training= True)
     
     refinenet.train( train_data,
-                "../models/deeplab/deeplab_0/",
-                training_iters = 200,
+                "../models/deeplab/deeplab_0/temp/",
+                training_iters = 1000,
                 epochs = 150,
-                display_step = 200,
+                display_step = 250,
                 keep_prob = 1.0,
                 opt_kwargs = { "cost": "dice_coefficient",
                               "optimizer": "adam",
                               "learning_rate": 1e-3,
                               "use_weight_map": False,
-                              "batch_size": 4,
+                              "batch_size": 3,
                               "pre_trained_model_iteration": None,
                               "test_data": test_data,
-                              "save_model_epochs": [ 149],
+                              "save_model_epochs": [ 0, 149],
                               "func_save_conditonal_model": func_save_conditonal_model()})
