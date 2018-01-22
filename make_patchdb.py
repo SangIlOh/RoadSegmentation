@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 
 import os
 import shutil
@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 
 import sys
 
-def ext_patch_list(img, gt_img, stride_step, patch_size, class_colors, OUTDIR, txtdir, imgidx):
+def ext_patch_list(img, gt_img, stride_step, patch_size, class_colors, OUTDIR, txtdir, imgidx, db_type):
 
     #patch_gt_list = np.zeros((patch_size[0], patch_size[1], len(class_colors)), np.uint8)
     patch_n = 0
@@ -76,9 +76,9 @@ if __name__ == "__main__":
             gt_img = cv2.imread(gt_list[now_img], -1)
 
             if now_img is not 18 and db_type[n_db] == "train":
-                ext_patch_list(img, gt_img, stride_step, patch_size, class_colors, ''.join([flist_base, db_type[n_db], "_patch/", str(now_img + 1)]),
-                               ''.join([flist_base, db_type[n_db], "_patchlist.txt"]), now_img + 1)
+                ext_patch_list(img, gt_img, stride_step, patch_size, class_colors, ''.join([flist_base, db_type[n_db], "_patch_aug/", str(now_img + 1)]),
+                               ''.join([flist_base, db_type[n_db], "_aug_patchlist.txt"]), now_img + 1, db_type[n_db])
             if now_img is not 0 and db_type[n_db] == "val":
                 imgidx_str = img_list[now_img].strip(''.join([flist_base, db_type[n_db],".bmp"]))
-                ext_patch_list(img, gt_img, stride_step, patch_size, class_colors, ''.join([flist_base, db_type[n_db], "_patch/", imgidx_str]),
-                               ''.join([flist_base, db_type[n_db], "_patchlist.txt"]), imgidx_str)
+                ext_patch_list(img, gt_img, stride_step, patch_size, class_colors, ''.join([flist_base, db_type[n_db], "_patch_aug/", imgidx_str]),
+                               ''.join([flist_base, db_type[n_db], "_aug_patchlist.txt"]), imgidx_str, db_type[n_db])
