@@ -458,6 +458,7 @@ class DataSet( object):
             cv2.imwrite( os.path.join( save_path, img_name + ".png"), save_img)
 
 
+
     def get_log( self):
         logging_str = [ "\t\t\tmodule : {0}\n".format( self.__module__),
                         "\t\t\tpath : {0}\n".format( self._dir),
