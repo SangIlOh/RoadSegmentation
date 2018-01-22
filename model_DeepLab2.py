@@ -1088,7 +1088,7 @@ class DeepLabv2( object):
             verification_x, verification_y, verification_weight = data.get_window_batch( pad_shape0, pad_shape1, verification_window_rect, 0, verification_batch_size)
             
             verification_pr, error_rate = self.output_verification_stats( sess, cost, use_weight_map, verification_x, verification_y, verification_weight)
-            data.save_prediction_img( verification_path, "_init", verification_x, verification_y, verification_pr, mask = None)
+            data.save_prediction_img( verification_path, "_init", verification_x, verification_y, verification_pr, save_img_type = 5, mask = None)
 
             batch_x = np.ndarray( shape = ( ( batch_size,) + self._input_HW + ( self._num_channel,)), dtype = np.float32)
             batch_y = np.ndarray( shape = ( ( batch_size,) + self._output_HW + ( self._num_class,)), dtype = np.float32)
@@ -1138,7 +1138,7 @@ class DeepLabv2( object):
 
                 logger.info( "Epoch {:}, Average loss: {:.4f}, learning rate: {:e}".format( epoch, ( total_loss / training_iters), lr))
                 verification_pr, error_rate = self.output_verification_stats( sess, cost, use_weight_map, verification_x, verification_y, verification_weight)
-                data.save_prediction_img( verification_path, "epoch_%s" % epoch, verification_x, verification_y, verification_pr, mask = None)
+                data.save_prediction_img( verification_path, "epoch_%s" % epoch, verification_x, verification_y, verification_pr, save_img_type = 5, mask = None)
                  
                 if test_data is not None:
                     error_rate, cm = self.output_test_stats( sess, cost, use_weight_map, test_data, use_average_mirror)
