@@ -870,7 +870,6 @@ class DeepLabv2( object):
         self._logits = fc2
         
         self._predictor = self.pixel_wise_softmax_2( self._logits)
-        #self._predictor = tf.nn.log_softmax( self._logits)
         self._saver = tf.train.Saver( max_to_keep = None)
 
 
@@ -878,58 +877,19 @@ class DeepLabv2( object):
         tensor_max = tf.tile( tf.reduce_max( output_map, 3, keep_dims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
         exponential_map = tf.exp( output_map - tensor_max)
         tensor_sum_exp = tf.tile( tf.reduce_sum( exponential_map, 3, keep_dims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
-        """
-        logits = tf.div(exponential_map,tensor_sum_exp)
-        square_map = tf.square(logits)
-        sum_square = tf.reduce_sum(square_map,3, keep_dims = True)
-        tensor_sum_square = tf.tile(sum_square, tf.stack([1,1,1,tf.shape(logits)[3]]))
-        return tf.div(square_map,tensor_sum_square)
-        """
-        return tf.div( exponential_map, tensor_sum_exp, name = "predictor")
 
-    def add_L2_regularizer( self, cost):
-        
-        regularizer = cost_kwargs.pop("regularizer", None)
-        if regularizer is not None:
-            regularizers = sum( [ tf.nn.l2_loss( variable) for variable in self._weights + self._biases])
-            cost += (regularizer * regularizers)
-            
-        return cost
+        return tf.div( exponential_map, tensor_sum_exp, name = "predictor")
 
 
     def train( self, data, output_path, training_iters = 10, epochs = 100, keep_prob = 0.75, display_step = 1, opt_kwargs = {}):
         
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_train_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        use_weight_map = opt_kwargs.pop( "use_weight_map", False)
-        cost_name = opt_kwargs.pop("cost", "dice_coefficient")
-        optimizer_name = opt_kwargs.pop( "optimizer", "SGD")
-        learning_rate = opt_kwargs.pop( "learning_rate", 0.2)
-        decay_rate = opt_kwargs.pop( "decay_rate", 0.95)
-        momentum = opt_kwargs.pop( "momentum", 0.2)
-        batch_size = opt_kwargs.pop( "batch_size", 1)
-        verification_path = opt_kwargs.pop( "verification_path", "verification")
-        verification_batch_size = opt_kwargs.pop( "verification_batch_size", 4)
-        pre_trained_model_iteration = opt_kwargs.pop( "pre_trained_model_iteration", None)
-        test_data = opt_kwargs.pop( "test_data", None)
-        use_average_mirror = opt_kwargs.pop( "use_average_mirror", False)
-        save_model_epochs = opt_kwargs.pop( "save_model_epochs", np.arange( epochs))
-        func_save_conditonal_model = opt_kwargs.pop( "func_save_conditonal_model", None)
-        additional_str = opt_kwargs.pop( "additional_str", None)
-
-        experimental_pmap_threshold_val = opt_kwargs.pop( "experimental_pmap_threshold_val", -1)
-        """
 
         # get options -----
         logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_train_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
         logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
         use_weight_map = opt_kwargs.pop( "use_weight_map", False)
-        cost_name = opt_kwargs.pop("cost", "dice_coefficient")
         optimizer_name = opt_kwargs.pop( "optimizer", "SGD")
         learning_rate = opt_kwargs.pop( "learning_rate", 0.2)
-        decay_rate = opt_kwargs.pop( "decay_rate", 0.95)
-        momentum = opt_kwargs.pop( "momentum", 0.2)
         batch_size = opt_kwargs.pop( "batch_size", 1)
         verification_path = opt_kwargs.pop( "verification_path", "verification")
         verification_batch_size = opt_kwargs.pop( "verification_batch_size", 4)
@@ -939,8 +899,6 @@ class DeepLabv2( object):
         save_model_epochs = opt_kwargs.pop( "save_model_epochs", np.arange( epochs))
         func_save_conditonal_model = opt_kwargs.pop( "func_save_conditonal_model", None)
         additional_str = opt_kwargs.pop( "additional_str", None)
-        
-        experimental_pmap_threshold_val = opt_kwargs.pop( "experimental_pmap_threshold_val", -1)
         # get options =====
 
 
@@ -980,22 +938,14 @@ class DeepLabv2( object):
                         "\t\t\tepochs : {0}\n".format( epochs),
                         "\t\t\tkeep_prob : {0}\n".format( keep_prob),
                         "\t\t\tdisplay_step : {0}\n".format( display_step),
-                        "\t\t\tcost_name : {0}\n".format( cost_name),
                         "\t\t\toptimizer_name : {0}\n".format( optimizer_name),
                         "\t\t\tlearning_rate : {0}\n".format( learning_rate),
-                        "\t\t\tdecay_rate : {0}\n".format( decay_rate) if optimizer_name == "SGD" else "",
-                        "\t\t\tmomentum : {0}\n".format( momentum) if optimizer_name == "SGD" else "",
                         "\t\t\tbatch_size : {0}\n".format( batch_size),
                         "\t\t\tverification_path : {0}\n".format( verification_path),
                         "\t\t\tverification_batch_size : {0}\n".format( verification_batch_size),
                         "\t\t\tpre_trained_model_iteration : {0}\n".format( str( pre_trained_model_iteration) if pre_trained_model_iteration is not None else "None"),
                         "\t\t\tsave_model_epochs : {0}\n".format( save_model_epochs),
                         "\t\t\taddtional_str : {0}\n".format( additional_str) if additional_str is not None else ""]
-        logger.info( ''.join( logging_str))
-
-
-        logging_str = [ "train_parmas experimental >>\n",
-                        "\t\t\texperimental_pmap_threshold_val : {0}\n".format( experimental_pmap_threshold_val)]
         logger.info( ''.join( logging_str))
 
 
@@ -1010,72 +960,28 @@ class DeepLabv2( object):
         time.sleep( 0.100)
         os.makedirs( verification_path, exist_ok = True)
         
-        if experimental_pmap_threshold_val > 0:
-            prediction0 = self.pixel_wise_softmax_2( self._logits)
-            logits_comparison = tf.less( prediction0, tf.constant( experimental_pmap_threshold_val, dtype = tf.float32))
-            prediction = tf.where( logits_comparison, tf.zeros_like( prediction0), prediction0)
-        else:
-            prediction = self.pixel_wise_softmax_2( self._logits)
-            #prediction = tf.nn.log_softmax( self._logits)
+        prediction = self.pixel_wise_softmax_2( self._logits)
 
+        
+        # dice_coefficient loss
+        use_weight_map = False
+        eps = 1e-5
+        for nc in range( self._num_class):    
+            prediction_nc = prediction[ :, :, :, nc]
+                
+            intersection = tf.reduce_sum( prediction_nc * self._y[ :, :, :, nc])
+            union = eps + tf.reduce_sum( prediction_nc * prediction_nc) + tf.reduce_sum( self._y[ :, :, :, nc])
 
-        if cost_name == "cross_entropy" :
-            
-            flat_logits = tf.reshape( self._logits, [-1, self._num_class])
-            flat_labels = tf.reshape( self._y, [-1, self._num_class])
-            if use_weight_map == False:
-                cost = tf.reduce_mean( tf.nn.softmax_cross_entropy_with_logits( logits = flat_logits, labels = flat_labels))
+            if "cost" in locals():
+                cost += -( 2 * intersection / union)
             else:
-                flat_loss_map = tf.nn.softmax_cross_entropy_with_logits( logits = flat_logits, labels = flat_labels)
-                loss_map = tf.reshape( flat_loss_map, [ -1, self._output_HW[ 0], self._output_HW[ 1]])
-                #flat_weight_map = tf.reshape( self._weight_map, [ -1])
-                cost = tf.reduce_mean( loss_map * self._weight_map)
-        elif cost_name == "dice_coefficient":
-            use_weight_map = False
-            eps = 1e-5
-            for nc in range( self._num_class):    
-                prediction_nc = prediction[ :, :, :, nc]
-                
-                #prediction_nc = tf.cast(prediction_nc+0.5, tf.float32)
-                
-                intersection = tf.reduce_sum( prediction_nc * self._y[ :, :, :, nc])
-                union = eps + tf.reduce_sum( prediction_nc * prediction_nc) + tf.reduce_sum( self._y[ :, :, :, nc])
-
-                if "cost" in locals():
-                    cost += -( 2 * intersection / union)
-                else:
-                    cost = -( 2 * intersection / union)
-            cost /= self._num_class
-
-        elif cost_name == "bootstrap":
-            xentropy = -tf.reduce_sum(prediction * self._y, axis = 3)
-            K = 512 * 64
-
-            result = tf.constant(0, dtype = tf.float32)
-            for i in range(batch_size):
-                batch_errors = xentropy[i]
-                #flat_errors = tf.contrib.layers.flatten(batch_errors)
-                flat_errors = tf.reshape( batch_errors, [ -1, 400 * 400])
-                worst_errors, indices_top = tf.nn.top_k(flat_errors, k = K, sorted = False)
-                result += tf.reduce_mean(worst_errors)
-            result /= tf.constant(batch_size, dtype= tf.float32)
-            cost = result
-
-        elif cost_name == "mean_square":
-            use_weight_map = False
-            loss = tf.reduce_sum((prediction - self._y)*(prediction - self._y))
-            size = (tf.shape(prediction)[3]*tf.shape(prediction)[1]*tf.shape(prediction)[2]*tf.shape(prediction)[0])
-            cost = tf.sqrt(loss/tf.cast(size, tf.float32))
-
+                cost = -( 2 * intersection / union)
+        cost /= self._num_class
                 
         global_step = tf.Variable( 0, name = "global_step", trainable = False)
-        if optimizer_name == "SGD":
-            learning_rate_node = tf.train.exponential_decay( learning_rate = learning_rate, global_step = global_step, decay_steps = training_iters, decay_rate = decay_rate, staircase = True)
-            optimizer = tf.train.MomentumOptimizer( learning_rate = learning_rate_node, momentum = momentum).minimize( cost, global_step = global_step)
-        else:
-            adam_op = tf.train.AdamOptimizer( learning_rate = learning_rate)
-            optimizer = adam_op.minimize( cost, global_step = global_step)
-            learning_rate_node = adam_op._lr_t
+        adam_op = tf.train.AdamOptimizer( learning_rate = learning_rate)
+        optimizer = adam_op.minimize( cost, global_step = global_step)
+        learning_rate_node = adam_op._lr_t
 
         
         tf.summary.scalar( "loss", cost)
@@ -1120,7 +1026,6 @@ class DeepLabv2( object):
                         batch_x[ nb, :, :, :] = x0
                         batch_y[ nb, :, :, :] = y0
                         batch_weight[ nb, :, :] = weight0
-                        #batch_fname.append( ( fname, window_rect))
  
                     if use_weight_map == False:
                         _, loss, lr = sess.run( ( optimizer, cost, learning_rate_node), feed_dict = { self._x: batch_x,
@@ -1143,8 +1048,6 @@ class DeepLabv2( object):
                         self.output_minibatch_stats( sess, cost, use_weight_map, start_iter + step, batch_x, batch_y, batch_weight)
                         
                     total_loss += loss
-
-                
 
                 if use_weight_map == False:
                     summary_str = sess.run( self._summary_op, feed_dict = { self._x: batch_x, self._y: batch_y, self._keep_prob: 1.})
@@ -1175,622 +1078,6 @@ class DeepLabv2( object):
             logger.info("Optimization Finished!")
             
             return output_path
-        
-    
-    def test( self, data, output_img_path, model_path, model_iter = -1, opt_kwargs = {}):
-
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_test_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        use_average_mirror = opt_kwargs.pop( "use_average_mirror", False)
-        step_width = opt_kwargs.pop( "step_width", -1)
-        step_height = opt_kwargs.pop( "step_height", -1)
-        save_img_type = opt_kwargs.pop( "save_img_type", 0)
-        return_gts = opt_kwargs.pop( "return_gts", False)
-        return_prs = opt_kwargs.pop( "return_prs", False)
-        additional_str = opt_kwargs.pop( "additional_str", None)
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_test_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        use_average_mirror = opt_kwargs.pop( "use_average_mirror", False)
-        step_width = opt_kwargs.pop( "step_width", -1)
-        step_height = opt_kwargs.pop( "step_height", -1)
-        save_img_type = opt_kwargs.pop( "save_img_type", 0)
-        return_gts = opt_kwargs.pop( "return_gts", False)
-        return_prs = opt_kwargs.pop( "return_prs", False)
-        additional_str = opt_kwargs.pop( "additional_str", None)
-
-        if len( opt_kwargs):
-            raise ValueError( "wrong opt_kwargs : %s" % ( str( opt_kwargs.keys())))
-
-        if len( logger.handlers) == 2:
-            logger.removeHandler( logger.handlers[ -1])
-
-        if os.path.isdir( logging_folder) == False:
-            os.makedirs( logging_folder)
-        file_handler = logging.FileHandler( os.path.join( logging_folder, logging_name))
-        file_handler.setFormatter( log_formatter)
-        logger.addHandler( file_handler)
-
-        logging_str = [ "test_parmas >>\n",
-                        "\t\t\tlogging name : {0}\n".format( logging_name),
-                        "\t\t\tdata_module : {0}\n".format( data.__module__),
-                        "\t\t\tdata_path : {0}\n".format( data.dir),
-                        "\t\t\toutput_img_path : {0}\n".format( output_img_path),
-                        "\t\t\tmodel_path : {0}\n".format( model_path),
-                        "\t\t\tuse_average_mirror : {0}\n".format( use_average_mirror),
-                        "\t\t\tmoving_width : {0}\n".format( step_width),
-                        "\t\t\tmoving_height : {0}\n".format( step_height),
-                        "\t\t\tadditional_str : {0}\n".format( additional_str) if additional_str is not None else ""]
-        logger.info( ''.join( logging_str))
-        
-
-        shutil.rmtree( output_img_path, ignore_errors = True)
-        time.sleep( 0.100)
-        os.makedirs( output_img_path, exist_ok = True)
-        f_csv = open( os.path.join( output_img_path, "result.csv"), "wt")
-
-        with tf.Session() as sess:
-                        
-            sess.run( tf.global_variables_initializer())
-            self.restore( sess, model_path, model_iter)
-
-            pad_shape0 = ( 0, 0)
-            pad_shape1 = ( 0, 0)
-            
-            if return_gts == True:
-                gts = np.zeros( shape = ( data.num_examples, data._resize_shape[ 0], data._resize_shape[ 1], data.num_class), dtype = np.float32)    
-            if return_prs == True:
-                prs = np.zeros( shape = ( data.num_examples, data._resize_shape[ 0], data._resize_shape[ 1], data.num_class), dtype = np.float32)    
-
-            data_num_class_wo_fake = data.num_class_wo_fake
-            total_pixel_error = 0.
-            ACCURACY = np.ndarray( shape = ( data.num_examples, data_num_class_wo_fake), dtype = np.float32)
-            PRECISION = np.ndarray( shape = ( data.num_examples, data_num_class_wo_fake), dtype = np.float32)
-            TP = np.ndarray( shape = ( data.num_examples, data_num_class_wo_fake), dtype = np.float32)
-            TN = np.ndarray( shape = ( data.num_examples, data_num_class_wo_fake), dtype = np.float32)
-            DS = np.ndarray( shape = ( data.num_examples, data_num_class_wo_fake), dtype = np.float32)
-            confusion_matrix_by_class = np.zeros( shape = ( data.num_class, data.num_class), dtype = np.int32)
-            for nd in range( data.num_examples):
-
-                x0, y0, _, mask0 = data.get( pad_shape0, pad_shape1, nd)
-
-                shape = y0.shape[ 1 : 3]
-
-                x = np.ndarray( shape = ( 1,) + shape + ( data.num_channel,), dtype = np.float32)
-                pr = np.zeros( shape = ( 1,) + shape + ( data.num_class,), dtype = np.float32)
-                acc_pr = np.zeros( shape = ( 1,) + shape + ( 1,), dtype = np.float32)
-
-                
-                if mask0 is not None:
-                    new_window_rects = []
-                    for nw, wr in enumerate( window_rects):
-                        on_cnt = np.count_nonzero( mask0[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3]])
-                        #if on_cnt > np.prod( self._output_HW) * 0.1:
-                        if on_cnt > np.prod( self._output_HW) * 0.01:
-                            new_window_rects.append( wr)
-                    window_rects = new_window_rects
-
-
-                wx = x0
-                wy = y0
-                pr_ = sess.run( self._predictor, feed_dict = { self._x: wx, self._y: wy, self._keep_prob: 1.})
-                x = wx
-                pr += pr_
-                acc_pr += 1
-                
-
-                if type( use_average_mirror) == bool and use_average_mirror == True:
-
-                    mirrored_x0s = [ np.flip( x0, axis = 1), np.flip( x0, axis = 2), np.flip( np.flip( x0, axis = 2), 1)]
-                    mirrored_y0s = [ np.flip( y0, axis = 1), np.flip( y0, axis = 2), np.flip( np.flip( y0, axis = 2), 1)]
-                    mirrored_prs = [ np.zeros_like( pr), np.zeros_like( pr), np.zeros_like( pr)]
-                    for mirrored_x0, mirrored_y0, mirrored_pr in zip( mirrored_x0s, mirrored_y0s, mirrored_prs):
-                        wx = mirrored_x0
-                        wy = mirrored_y0
-                        pr_ = sess.run( self._predictor, feed_dict = { self._x: wx, self._y: wy, self._keep_prob: 1.})
-                        mirrored_pr += pr_
-                    
-                    pr += np.flip( mirrored_prs[ 0], axis = 1)
-                    pr += np.flip( mirrored_prs[ 1], axis = 2)
-                    pr += np.flip( np.flip( mirrored_prs[ 2], axis = 1), axis = 2)
-                    acc_pr = acc_pr + np.flip( acc_pr, axis = 1) + np.flip( acc_pr, axis = 2) + np.flip( np.flip( acc_pr, axis = 2), 1)
-                elif type( use_average_mirror) == list:
-
-                    mirrored_x0s = []
-                    mirrored_y0s = []
-                    mirrored_prs = []
-                    for nf in use_average_mirror:
-                        mirrored_x0s.append( np.flip( x0, axis = nf))
-                        mirrored_y0s.append( np.flip( y0, axis = nf))
-                        mirrored_prs.append( np.zeros_like( pr))
-                    for mirrored_x0, mirrored_y0, mirrored_pr in zip( mirrored_x0s, mirrored_y0s, mirrored_prs):
-                        for nw, wr in enumerate( window_rects):
-                            wx = mirrored_x0[ :, wr[ 0] : wr[ 0] + wr[ 2] + np.sum( pad_shape0), wr[ 1] : wr[ 1] + wr[ 3] + np.sum( pad_shape1), :]
-                            wy = mirrored_y0[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :]
-                            pr_ = sess.run( self._predictor, feed_dict = { self._x: wx, self._y: wy, self._keep_prob: 1.})
-                            mirrored_pr[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] += pr_
-                    
-                    for ni, nf in enumerate( use_average_mirror):
-                        pr += np.flip( mirrored_prs[ ni], axis = nf)
-                        acc_pr = acc_pr + np.flip( acc_pr, axis = nf)
-
-                pr = pr / acc_pr
-                if return_gts == True:
-                    gts[ nd, ...] = y0[ 0, ...]
-                if return_prs == True:
-                    prs[ nd, ...] = pr[ 0, ...]
-                argmax_pr = np.argmax( pr, 3)
-                argmax_gt = np.argmax( y0, 3)
-                argmax_pr_ncs = []
-                argmax_gt_ncs = []
-                for nc in range( data.num_class):
-                    argmax_pr_ncs.append( argmax_pr == nc)
-                    argmax_gt_ncs.append( argmax_gt == nc)
-
-                for nc in range( data_num_class_wo_fake):
-                    argmax_pr_nc = argmax_pr_ncs[ nc]
-                    argmax_gt_nc = argmax_gt_ncs[ nc]
-                    tp = np.count_nonzero( np.logical_and( argmax_pr_nc, argmax_gt_nc))
-                    tn = np.count_nonzero( np.logical_and( ( ~argmax_pr_nc), ( ~argmax_gt_nc)))
-                    union = np.count_nonzero( np.logical_or( argmax_pr_nc, argmax_gt_nc))
-                    tp_fp = np.count_nonzero( argmax_pr_nc)
-                    tp_fn = np.count_nonzero( argmax_gt_nc)
-                    not_tp_fn = np.count_nonzero( ~argmax_gt_nc)
-
-                    PRECISION[ nd, nc] = ( tp / tp_fp) if tp_fp > 0 else np.nan
-                    ACCURACY[ nd, nc] = ( tp / union) if union > 0 else np.nan
-                    TP[ nd, nc] = ( tp / tp_fn) if tp_fn > 0 else np.nan
-                    TN[ nd, nc] = ( tn / not_tp_fn) if not_tp_fn > 0 else np.nan
-                    DS[ nd, nc] = ( 2 * tp / ( tp_fp + tp_fn)) if tp_fp + tp_fn > 0 else np.nan
-                
-                # confusion-matrix by class
-                for nc_gt in range( data.num_class):
-                    for nc_pr in range( data.num_class):
-                        cm_val = np.sum( np.logical_and( argmax_gt_ncs[ nc_gt], argmax_pr_ncs[ nc_pr]))
-                        confusion_matrix_by_class[ nc_gt][ nc_pr] += cm_val
-
-                pixel_error = 100.0 * np.count_nonzero( argmax_pr != argmax_gt) / ( 1 * pr.shape[ 1] * pr.shape[ 2])
-                total_pixel_error += pixel_error
-
-                logging_str = [ "image_name = {:}\n".format( data.img_list[ nd]),
-                               "\t\t\tpixel_error = {:.2f}%\n".format( pixel_error),
-                                "\t\t\taccuracy = {:.2f}\n".format( np.nanmean( ACCURACY[ nd, :])),
-                                "\t\t\trecall = {:.2f}\n".format( np.nanmean( TP[ nd, :])),
-                                "\t\t\tprecision = {:.2f}\n".format( np.nanmean( PRECISION[ nd, :])),
-                                "\t\t\ttrue_negatives = {:.2f}\n".format( np.nanmean( TN[ nd, :])),
-                                "\t\t\tdice_similarity = {:.2f}".format( np.nanmean( DS[ nd, :]))]
-                logger.info( ''.join( logging_str))
-                f_csv.write( "%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n" % ( data.img_list[ nd], pixel_error, np.nanmean( ACCURACY[ nd, :]), np.nanmean( TP[ nd, :]), np.nanmean( PRECISION[ nd, :]), np.nanmean( TN[ nd, :]), np.nanmean( DS[ nd, :])))
-
-                #x = np.pad( x, ( ( 0, 0), pad_shape0, pad_shape1, ( 0, 0)), mode = "constant")
-                result_img_name, _ = os.path.splitext( data.img_list[ nd])
-                data.save_prediction_img( output_img_path, result_img_name, x0, y0, pr, save_img_type = save_img_type, mask = mask0)
-                
-            logging_str = [ "total mean>>\n",
-                            "\t\t\tpixel_error = {:.2f}%\n".format( total_pixel_error / data.num_examples),
-                            "\t\t\taccuracy = {:.2f}\n".format( np.nanmean( ACCURACY)),
-                            "\t\t\trecall = {:.2f}\n".format( np.nanmean( TP)),
-                            "\t\t\tprecision = {:.2f}\n".format( np.nanmean( PRECISION)),
-                            "\t\t\ttrue_negatives = {:.2f}\n".format( np.nanmean( TN)),
-                            "\t\t\tdice_similarity = {:.2f}".format( np.nanmean( DS))]
-            logger.info( ''.join( logging_str))
-            formatter = '[' + ( "{:6d}," * data.num_class)[ : -1] + ']'
-            logging_str = [ "========================================================\n",
-                            "\t\t\taccuracy = {0}\n".format( np.array2string( np.nanmean( ACCURACY, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                            "\t\t\trecall = {0}\n".format( np.array2string( np.nanmean( TP, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                            "\t\t\tprecision = {0}\n".format( np.array2string( np.nanmean( PRECISION, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                            "\t\t\ttrue_negatives = {0}\n".format( np.array2string( np.nanmean( TN, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                            "\t\t\tdice_similarity = {0}\n".format( np.array2string( np.nanmean( DS, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                            "\t\t\tconfusion_matrix_nc>>\n",
-                            *[ "\t\t\t\t%s\n" % ( formatter.format( *[ confusion_matrix_by_class[ nc1][ nc2] for nc2 in range( data.num_class)])) for nc1 in range( data.num_class)],
-                            "\t\t\trecall_by_cm = {0}\n".format( np.array2string( np.array( [ confusion_matrix_by_class[ nc][ nc] / np.sum( confusion_matrix_by_class[ nc, :]) for nc in range( data.num_class)]), max_line_width = 1000, precision = 4, separator = ',')),
-                            "\t\t\tprecision_by_cm = {0}\n".format( np.array2string( np.array( [ confusion_matrix_by_class[ nc][ nc] / np.sum( confusion_matrix_by_class[ :, nc]) for nc in range( data.num_class)]), max_line_width = 1000, precision = 4, separator = ','))]
-            logger.info( ''.join( logging_str))
-
-            f_csv.write( "\n\n")
-            f_csv.write( "mean_nc_accuracy,%s\n" % ( np.array2string( np.nanmean( ACCURACY, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_nc_recall,%s\n" % ( np.array2string( np.nanmean( TP, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_nc_precision,%s\n" % ( np.array2string( np.nanmean( PRECISION, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_nc_dice_similarity,%s\n" % ( np.array2string( np.nanmean( DS, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "\n\n")
-            f_csv.write( "mean_accuracy,%s\n" % ( np.array2string( np.nanmean( ACCURACY), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_recall,%s\n" % ( np.array2string( np.nanmean( TP), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_precision,%s\n" % ( np.array2string( np.nanmean( PRECISION), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_true_negatives,%s\n" % ( np.array2string( np.nanmean( TN), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "mean_dice_similarity,%s\n" % ( np.array2string( np.nanmean( DS), max_line_width = 1000, precision = 4, separator = ',')))
-            f_csv.write( "\n\nconfusion_matrix_nc\n")
-            f_csv.write( "%s\n" % ( np.array2string( confusion_matrix_by_class, max_line_width = 1000, separator = ',')))
-        f_csv.close()
-        return ( gts if return_gts == True else None, prs if return_prs == True else None)
-
-
-    def test_from_prs( self, data, gts, arr_prs, output_img_path, opt_kwargs = {}):
-        
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_test_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        ensemble_type = opt_kwargs.pop( "ensemble_type", "ADD")
-        save_img_type = opt_kwargs.pop( "save_img_type", 0)
-        imgs = opt_kwargs.pop( "imgs", None)
-        additional_str = opt_kwargs.pop( "additional_str", None)
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_test_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        ensemble_type = opt_kwargs.pop( "ensemble_type", "ADD")
-        save_img_type = opt_kwargs.pop( "save_img_type", 0)
-        imgs = opt_kwargs.pop( "imgs", None)
-        additional_str = opt_kwargs.pop( "additional_str", None)
-
-        if len( opt_kwargs):
-            raise ValueError( "wrong opt_kwargs : %s" % ( str( opt_kwargs.keys())))
-
-        if len( logger.handlers) == 2:
-            logger.removeHandler( logger.handlers[ -1])
-
-        if os.path.isdir( logging_folder) == False:
-            os.makedirs( logging_folder)
-        file_handler = logging.FileHandler( os.path.join( logging_folder, logging_name))
-        file_handler.setFormatter( log_formatter)
-        logger.addHandler( file_handler)
-
-        logging_str = [ "test_parmas >>\n",
-                        "\t\t\tlogging name : {0}\n".format( logging_name),
-                        "\t\t\toutput_img_path : {0}\n".format( output_img_path),
-                        "\t\t\tensemble_type : {0}\n".format( ensemble_type),
-                        "\t\t\tadditional_str : {0}\n".format( additional_str) if additional_str is not None else ""]
-        logger.info( ''.join( logging_str))
-        
-        prs = np.zeros_like( arr_prs[ 0])
-        if ensemble_type == "ADD":
-            for prs0 in arr_prs:
-                prs += prs0
-            prs /= len( arr_prs)
-        else:
-            """
-            prs_or = np.full( shape = arr_prs[ 0].shape, fill_value = False, dtype = np.bool)
-            for prs0 in arr_prs:
-                prs_or[ ..., 0] = np.logical_or( prs_or[ ..., 0], prs0[ ..., 0] >= 0.5)
-            for nc in range( 1, prs_or.shape[ 3]):
-                prs_or[ ..., nc] = np.logical_not( prs_or[ ..., 0])
-            prs = prs_or.astype( np.float32)
-            """
-            prs_max = np.full( shape = arr_prs[ 0].shape, fill_value = 0, dtype = np.float32)
-            for prs0 in arr_prs:
-                prs_max[ ..., 0] = np.max( ( prs_max[ ..., 0], prs0[ ..., 0]), axis = 0)
-            for nc in range( 1, prs_max.shape[ 3]):
-                prs_max[ ..., nc] = ( 1 - prs_max[ ..., 0]) / ( prs_max.shape[ 3] - 1)
-            prs = prs_max
-            
-
-        shutil.rmtree( output_img_path, ignore_errors = True)
-        time.sleep( 0.100)
-        os.makedirs( output_img_path, exist_ok = True)
-        f_csv = open( os.path.join( output_img_path, "result.csv"), "wt")
-                                
-        pad_shape0 = ( ( self._input_HW[ 0] - self._output_HW[ 0]) // 2, ( self._input_HW[ 0] - self._output_HW[ 0]) // 2)
-        pad_shape1 = ( ( self._input_HW[ 1] - self._output_HW[ 1]) // 2, ( self._input_HW[ 1] - self._output_HW[ 1]) // 2)
-                
-        total_pixel_error = 0.
-        ACCURACY = np.ndarray( shape = ( data.num_examples, data.num_class_wo_fake), dtype = np.float32)
-        PRECISION = np.ndarray( shape = ( data.num_examples, data.num_class_wo_fake), dtype = np.float32)
-        TP = np.ndarray( shape = ( data.num_examples, data.num_class_wo_fake), dtype = np.float32)
-        TN = np.ndarray( shape = ( data.num_examples, data.num_class_wo_fake), dtype = np.float32)
-        DS = np.ndarray( shape = ( data.num_examples, data.num_class_wo_fake), dtype = np.float32)
-        confusion_matrix_by_class = np.zeros( shape = ( data.num_class, data.num_class), dtype = np.int32)
-        for nd in range( data.num_examples):
-
-            pr = prs[ nd]
-            pr = pr[ np.newaxis, ...]
-            y0 = gts[ nd]
-            y0 = y0[ np.newaxis, ...]
-
-            argmax_pr = np.argmax( pr, 3)
-            argmax_gt = np.argmax( y0, 3)
-            argmax_pr_ncs = []
-            argmax_gt_ncs = []
-            for nc in range( data.num_class):
-                argmax_pr_ncs.append( argmax_pr == nc)
-                argmax_gt_ncs.append( argmax_gt == nc)
-
-            for nc in range( data.num_class_wo_fake):
-                argmax_pr_nc = argmax_pr_ncs[ nc]
-                argmax_gt_nc = argmax_gt_ncs[ nc]
-                tp = np.count_nonzero( np.logical_and( argmax_pr_nc, argmax_gt_nc))
-                tn = np.count_nonzero( np.logical_and( ( ~argmax_pr_nc), ( ~argmax_gt_nc)))
-                union = np.count_nonzero( np.logical_or( argmax_pr_nc, argmax_gt_nc))
-                tp_fp = np.count_nonzero( argmax_pr_nc)
-                tp_fn = np.count_nonzero( argmax_gt_nc)
-                not_tp_fn = np.count_nonzero( ~argmax_gt_nc)
-
-                PRECISION[ nd, nc] = ( tp / tp_fp) if tp_fp > 0 else np.nan
-                ACCURACY[ nd, nc] = ( tp / union) if union > 0 else np.nan
-                TP[ nd, nc] = ( tp / tp_fn) if tp_fn > 0 else np.nan
-                TN[ nd, nc] = ( tn / not_tp_fn) if not_tp_fn > 0 else np.nan
-                DS[ nd, nc] = ( 2 * tp / ( tp_fp + tp_fn)) if tp_fp + tp_fn > 0 else np.nan
-                
-            # confusion-matrix by class
-            for nc_gt in range( data.num_class):
-                for nc_pr in range( data.num_class):
-                    cm_val = np.sum( np.logical_and( argmax_gt_ncs[ nc_gt], argmax_pr_ncs[ nc_pr]))
-                    confusion_matrix_by_class[ nc_gt][ nc_pr] += cm_val
-
-            pixel_error = 100.0 * np.count_nonzero( argmax_pr != argmax_gt) / ( 1 * pr.shape[ 1] * pr.shape[ 2])
-            total_pixel_error += pixel_error
-
-            logging_str = [ "image_name = {:}\n".format( data.img_list[ nd]),
-                            "\t\t\tpixel_error = {:.2f}%\n".format( pixel_error),
-                            "\t\t\taccuracy = {:.2f}\n".format( np.nanmean( ACCURACY[ nd, :])),
-                            "\t\t\trecall = {:.2f}\n".format( np.nanmean( TP[ nd, :])),
-                            "\t\t\tprecision = {:.2f}\n".format( np.nanmean( PRECISION[ nd, :])),
-                            "\t\t\ttrue_negatives = {:.2f}\n".format( np.nanmean( TN[ nd, :])),
-                            "\t\t\tdice_similarity = {:.2f}".format( np.nanmean( DS[ nd, :]))]
-            logger.info( ''.join( logging_str))
-            f_csv.write( "%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n" % ( data.img_list[ nd], pixel_error, np.nanmean( ACCURACY[ nd, :]), np.nanmean( TP[ nd, :]), np.nanmean( PRECISION[ nd, :]), np.nanmean( TN[ nd, :]), np.nanmean( DS[ nd, :])))
-
-            if imgs is not None:
-                img0 = imgs[ nd][ np.newaxis, ...]
-                x0 = np.pad( img0, ( ( 0, 0), pad_shape0, pad_shape1, ( 0, 0)), mode = "constant")
-            else:
-                x0 = np.zeros( shape = ( ( y0.shape[ 0],) + ( self._input_HW) + ( 1,)), dtype = np.uint8)
-            result_img_name, _ = os.path.splitext( data.img_list[ nd])
-            data.save_prediction_img( output_img_path, result_img_name, x0, y0, pr, save_img_type = save_img_type, mask = None)
-                
-        logging_str = [ "total mean>>\n",
-                        "\t\t\tpixel_error = {:.2f}%\n".format( total_pixel_error / data.num_examples),
-                        "\t\t\taccuracy = {:.2f}\n".format( np.nanmean( ACCURACY)),
-                        "\t\t\trecall = {:.2f}\n".format( np.nanmean( TP)),
-                        "\t\t\tprecision = {:.2f}\n".format( np.nanmean( PRECISION)),
-                        "\t\t\ttrue_negatives = {:.2f}\n".format( np.nanmean( TN)),
-                        "\t\t\tdice_similarity = {:.2f}".format( np.nanmean( DS))]
-        logger.info( ''.join( logging_str))
-        formatter = '[' + ( "{:6d}," * data.num_class)[ : -1] + ']'
-        logging_str = [ "========================================================\n",
-                        "\t\t\taccuracy = {0}\n".format( np.array2string( np.nanmean( ACCURACY, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                        "\t\t\trecall = {0}\n".format( np.array2string( np.nanmean( TP, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                        "\t\t\tprecision = {0}\n".format( np.array2string( np.nanmean( PRECISION, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                        "\t\t\ttrue_negatives = {0}\n".format( np.array2string( np.nanmean( TN, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                        "\t\t\tdice_similarity = {0}\n".format( np.array2string( np.nanmean( DS, axis = 0), max_line_width = 1000, precision = 4, separator = ',')),
-                        "\t\t\tconfusion_matrix_nc>>\n",
-                        *[ "\t\t\t\t%s\n" % ( formatter.format( *[ confusion_matrix_by_class[ nc1][ nc2] for nc2 in range( data.num_class)])) for nc1 in range( data.num_class)],
-                        "\t\t\trecall_by_cm = {0}\n".format( np.array2string( np.array( [ confusion_matrix_by_class[ nc][ nc] / np.sum( confusion_matrix_by_class[ nc, :]) for nc in range( data.num_class)]), max_line_width = 1000, precision = 4, separator = ',')),
-                        "\t\t\tprecision_by_cm = {0}\n".format( np.array2string( np.array( [ confusion_matrix_by_class[ nc][ nc] / np.sum( confusion_matrix_by_class[ :, nc]) for nc in range( data.num_class)]), max_line_width = 1000, precision = 4, separator = ','))]
-        logger.info( ''.join( logging_str))
-
-        f_csv.write( "\n\n")
-        f_csv.write( "mean_nc_accuracy,%s\n" % ( np.array2string( np.nanmean( ACCURACY, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_nc_recall,%s\n" % ( np.array2string( np.nanmean( TP, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_nc_precision,%s\n" % ( np.array2string( np.nanmean( PRECISION, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_nc_dice_similarity,%s\n" % ( np.array2string( np.nanmean( DS, axis = 0), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "\n\n")
-        f_csv.write( "mean_accuracy,%s\n" % ( np.array2string( np.nanmean( ACCURACY), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_recall,%s\n" % ( np.array2string( np.nanmean( TP), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_precision,%s\n" % ( np.array2string( np.nanmean( PRECISION), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_true_negatives,%s\n" % ( np.array2string( np.nanmean( TN), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "mean_dice_similarity,%s\n" % ( np.array2string( np.nanmean( DS), max_line_width = 1000, precision = 4, separator = ',')))
-        f_csv.write( "\n\nconfusion_matrix_nc\n")
-        f_csv.write( "%s\n" % ( np.array2string( confusion_matrix_by_class, max_line_width = 1000, separator = ',')))
-        f_csv.close()
-
-
-    def test_using_rank_one_vs_all( self, data, class_idx, min_rank, output_img_path, model_path, model_iter = -1, opt_kwargs = {}):
-
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_test_using_rank_one_vs_all_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        use_average_mirror = opt_kwargs.pop( "use_average_mirror", False)
-        min_threshold = opt_kwargs.pop( "min_threshold", 0)
-        thresholds = opt_kwargs.pop( "thresholds", [])
-        """
-        logging_name = opt_kwargs.pop( "logging_name", self._model_name + "_test_using_rank_one_vs_all_" + time.strftime( "%Y%m%d-%H%M%S") + ".log")
-        logging_folder = opt_kwargs.pop( "logging_folder", "./logs")
-        use_average_mirror = opt_kwargs.pop( "use_average_mirror", False)
-        min_threshold = opt_kwargs.pop( "min_threshold", 0)
-        thresholds = opt_kwargs.pop( "thresholds", [])
-
-        if len( opt_kwargs):
-            raise ValueError( "wrong opt_kwargs : %s" % ( str( opt_kwargs.keys())))
-
-        if len( logger.handlers) == 2:
-            logger.removeHandler( logger.handlers[ -1])
-
-        if os.path.isdir( logging_folder) == False:
-            os.makedirs( logging_folder)
-        file_handler = logging.FileHandler( os.path.join( logging_folder, logging_name))
-        file_handler.setFormatter( log_formatter)
-        logger.addHandler( file_handler)
-
-        logging_str = [ "test_parmas >>\n",
-                        "\t\t\tlogging name : {0}\n".format( logging_name),
-                        "\t\t\tdata_module : {0}\n".format( data.__module__),
-                        "\t\t\tdata_path : {0}\n".format( data.dir),
-                        "\t\t\tclass_idx : {0}\n".format( class_idx),
-                        "\t\t\tmin_rank : {0}\n".format( min_rank),
-                        "\t\t\toutput_img_path : {0}\n".format( output_img_path),
-                        "\t\t\tmodel_path : {0}\n".format( model_path),
-                        "\t\t\tuse_average_mirror : {0}\n".format( use_average_mirror),
-                        "\t\t\tmin_threshold : {0}\n".format( min_threshold),
-                        "\t\t\tthresholds : {0}\n".format( thresholds)]
-        logger.info( ''.join( logging_str))
-        
-        if len( thresholds) == 0:
-            TPs = None
-            FPs = None
-            FNs = None
-            TNs = None
-        else:
-            TPs = np.zeros( shape = ( len( thresholds),), dtype = np.int32)
-            FPs = np.zeros( shape = ( len( thresholds),), dtype = np.int32)
-            FNs = np.zeros( shape = ( len( thresholds),), dtype = np.int32)
-            TNs = np.zeros( shape = ( len( thresholds),), dtype = np.int32)
-
-        shutil.rmtree( output_img_path, ignore_errors = True)
-        time.sleep( 0.100)
-        os.makedirs( output_img_path, exist_ok = True)
-
-        with tf.Session() as sess:
-                        
-            sess.run( tf.global_variables_initializer())
-            self.restore( sess, model_path, model_iter)
-
-            pad_shape0 = ( ( self._input_HW[ 0] - self._output_HW[ 0]) // 2, ( self._input_HW[ 0] - self._output_HW[ 0]) // 2)
-            pad_shape1 = ( ( self._input_HW[ 1] - self._output_HW[ 1]) // 2, ( self._input_HW[ 1] - self._output_HW[ 1]) // 2)
-                
-            data_num_class_wo_fake = data.num_class_wo_fake
-            confusion_matrix_by_class = np.zeros( shape = ( data.num_class, data.num_class), dtype = np.int32)
-            for nd in range( data.num_examples):
-
-                x0, y0, _, mask0 = data.get( pad_shape0, pad_shape1, nd)
-
-                shape = y0.shape[ 1 : 3]
-
-                x = np.ndarray( shape = ( 1,) + shape + ( data.num_channel,), dtype = np.float32)
-                pr = np.zeros( shape = ( 1,) + shape + ( data.num_class,), dtype = np.float32)
-                acc_pr = np.zeros( shape = ( 1,) + shape + ( data.num_class,), dtype = np.float32)
-                gt = np.ndarray( shape = ( 1,) + shape + ( data.num_class,), dtype = np.float32)
-
-                step0 = np.arange( 0, shape[ 0], self._output_HW[ 0])
-                ranges0 = []
-                for ns in range( len( step0) - 1):
-                    ranges0 = ranges0 + [ ( step0[ ns], step0[ ns + 1])]
-                ranges0 = ranges0 + [ ( shape[ 0] - self._output_HW[ 0], shape[ 0])]
-
-                step1 = np.arange( 0, shape[ 1], self._output_HW[ 1])
-                ranges1 = []
-                for ns in range( len( step1) - 1):
-                    ranges1 = ranges1 + [ ( step1[ ns], step1[ ns + 1])]
-                ranges1 = ranges1 + [ ( shape[ 1] - self._output_HW[ 1], shape[ 1])]
-
-                window_rects = []
-                for r0 in ranges0:
-                    for r1 in ranges1:
-                        window_rects += [ ( r0[ 0], r1[ 0], self._output_HW[ 0], self._output_HW[ 1])]
-
-
-                if mask0 is not None:
-                    new_window_rects = []
-                    for nw, wr in enumerate( window_rects):
-                        on_cnt = np.count_nonzero( mask0[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3]])
-                        if on_cnt > np.prod( self._output_HW) * 0.1:
-                            new_window_rects.append( wr)
-                    window_rects = new_window_rects
-
-
-                for nw, wr in enumerate( window_rects):
-
-                    wx = x0[ :, wr[ 0] : wr[ 0] + wr[ 2] + np.sum( pad_shape0), wr[ 1] : wr[ 1] + wr[ 3] + np.sum( pad_shape1), :]
-                    wy = y0[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :]
-                    pr_ = sess.run( self._predictor, feed_dict = { self._x: wx, self._y: wy, self._keep_prob: 1.})
-                    x[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] = wx[ :, pad_shape0[ 0] : -pad_shape0[ 1], pad_shape1[ 0] : -pad_shape1[ 1], :]
-                    pr[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] += pr_
-                    acc_pr[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] += 1
-                    gt[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] = wy
-
-                if use_average_mirror == True:
-
-                    mirrored_x0s = [ np.flip( x0, axis = 1), np.flip( x0, axis = 2), np.flip( np.flip( x0, axis = 2), 1)]
-                    mirrored_y0s = [ np.flip( y0, axis = 1), np.flip( y0, axis = 2), np.flip( np.flip( y0, axis = 2), 1)]
-                    mirrored_prs = [ np.zeros_like( pr), np.zeros_like( pr), np.zeros_like( pr)]
-                    for mirrored_x0, mirrored_y0, mirrored_pr in zip( mirrored_x0s, mirrored_y0s, mirrored_prs):
-                        for nw, wr in enumerate( window_rects):
-                            wx = mirrored_x0[ :, wr[ 0] : wr[ 0] + wr[ 2] + np.sum( pad_shape0), wr[ 1] : wr[ 1] + wr[ 3] + np.sum( pad_shape1), :]
-                            wy = mirrored_y0[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :]
-                            pr_ = sess.run( self._predictor, feed_dict = { self._x: wx, self._y: wy, self._keep_prob: 1.})
-                            mirrored_pr[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] += pr_
-                    pr += np.flip( mirrored_prs[ 0], axis = 1)
-                    pr += np.flip( mirrored_prs[ 1], axis = 2)
-                    pr += np.flip( np.flip( mirrored_prs[ 2], axis = 1), axis = 2)
-                    acc_pr = acc_pr + np.flip( acc_pr, axis = 1) + np.flip( acc_pr, axis = 2) + np.flip( np.flip( acc_pr, axis = 2), 1)
-                pr = pr / acc_pr
-                
-                argmax_gt = np.argmax( gt, 3)
-                argmax_gt_ncs = []
-                for nc in range( data.num_class):
-                    argmax_gt_ncs.append( argmax_gt == nc)
-                argsort_pr = np.argsort( pr, axis = 3)[ :, :, :, :: -1]
-                arg_pr_nc_where = np.where( argsort_pr == class_idx)
-                nc_idx1 = arg_pr_nc_where[ 3] < min_rank
-                
-                for nt, threshold in enumerate( thresholds):
-                    pr2 = np.copy( pr)
-                    nc_idx2 = pr2[ arg_pr_nc_where[ 0], arg_pr_nc_where[ 1], arg_pr_nc_where[ 2], class_idx] > threshold
-                    nc_idx = np.logical_and( nc_idx1, nc_idx2)
-                    pr2[ arg_pr_nc_where[ 0][ nc_idx], arg_pr_nc_where[ 1][ nc_idx], arg_pr_nc_where[ 2][ nc_idx], class_idx] = 1.0
-                    nc_idx = ~nc_idx
-                    pr2[ arg_pr_nc_where[ 0][ nc_idx], arg_pr_nc_where[ 1][ nc_idx], arg_pr_nc_where[ 2][ nc_idx], class_idx] = 0.0
-
-                    argmax_pr = np.argmax( pr2, 3)
-                    argmax_pr_ncs = []
-                    for nc in range( data.num_class):
-                        argmax_pr_ncs.append( argmax_pr == nc)
-                
-                    confusion_matrix_by_class_ts = np.zeros( shape = ( data.num_class, data.num_class), dtype = np.int32)
-                    # confusion-matrix by class
-                    for nc_gt in range( data.num_class):
-                        for nc_pr in range( data.num_class):
-                            cm_val = np.sum( np.logical_and( argmax_gt_ncs[ nc_gt], argmax_pr_ncs[ nc_pr]))
-                            confusion_matrix_by_class_ts[ nc_gt][ nc_pr] = cm_val
-                    TP = confusion_matrix_by_class_ts[ class_idx, class_idx]
-                    FP = np.sum( confusion_matrix_by_class_ts[ :, class_idx]) - TP
-                    FN = np.sum( confusion_matrix_by_class_ts[ class_idx, :]) - TP
-                    TN = np.sum( confusion_matrix_by_class_ts) - TP - FP - FN
-                    TPs[ nt] += TP
-                    FPs[ nt] += FP
-                    FNs[ nt] += FN
-                    TNs[ nt] += TN
-
-                         
-                pr2 = np.copy( pr)
-                nc_idx2 = pr2[ arg_pr_nc_where[ 0], arg_pr_nc_where[ 1], arg_pr_nc_where[ 2], class_idx] > min_threshold
-                nc_idx = np.logical_and( nc_idx1, nc_idx2)
-                pr2[ arg_pr_nc_where[ 0][ nc_idx], arg_pr_nc_where[ 1][ nc_idx], arg_pr_nc_where[ 2][ nc_idx], class_idx] = 1.0
-                nc_idx = ~nc_idx
-                pr2[ arg_pr_nc_where[ 0][ nc_idx], arg_pr_nc_where[ 1][ nc_idx], arg_pr_nc_where[ 2][ nc_idx], class_idx] = 0.0
-
-                argmax_pr = np.argmax( pr2, 3)
-                argmax_pr_ncs = []
-                for nc in range( data.num_class):
-                    argmax_pr_ncs.append( argmax_pr == nc)
-                
-                confusion_matrix_by_class1 = np.zeros( shape = ( data.num_class, data.num_class), dtype = np.int32)
-                # confusion-matrix by class
-                for nc_gt in range( data.num_class):
-                    for nc_pr in range( data.num_class):
-                        cm_val = np.sum( np.logical_and( argmax_gt_ncs[ nc_gt], argmax_pr_ncs[ nc_pr]))
-                        confusion_matrix_by_class1[ nc_gt][ nc_pr] = cm_val
-                confusion_matrix_by_class = confusion_matrix_by_class1
-                
-                TP = confusion_matrix_by_class1[ class_idx, class_idx]
-                FP = np.sum( confusion_matrix_by_class1[ :, class_idx]) - TP
-                FN = np.sum( confusion_matrix_by_class1[ class_idx, :]) - TP
-                TN = np.sum( confusion_matrix_by_class1) - TP - FP - FN
-                logging_str = [ "image_name = {:}\n".format( data.img_list[ nd]),
-                                "\t\t\tTP = {0}\n".format( TP),
-                                "\t\t\tFP = {0}\n".format( FP),
-                                "\t\t\tFN = {0}\n".format( FN),
-                                "\t\t\tTN = {0}\n".format( TN),
-                                "\t\t\trecall = {:.2f}\n".format( TP / ( TP + FN) if ( TP + FN) > 0 else 0),
-                                "\t\t\tprecision = {:.2f}\n".format( TP / ( TP + FP) if ( TP + FP) > 0 else 0)]
-                logger.info( ''.join( logging_str))
-
-                x = np.pad( x, ( ( 0, 0), pad_shape0, pad_shape1, ( 0, 0)), mode = "constant")
-                result_img_name, _ = os.path.splitext( data.img_list[ nd])
-                data.save_prediction_img( output_img_path, result_img_name, x, gt, pr2, save_img_type = 1, mask = None)
-                
-            TP = confusion_matrix_by_class[ class_idx, class_idx]
-            FP = np.sum( confusion_matrix_by_class[ :, class_idx]) - TP
-            FN = np.sum( confusion_matrix_by_class[ class_idx, :]) - TP
-            TN = np.sum( confusion_matrix_by_class) - TP - FP - FN
-            logging_str = [ "total mean>>\n",
-                            "\t\t\tTP = {0}\n".format( TP),
-                            "\t\t\tFP = {0}\n".format( FP),
-                            "\t\t\tFN = {0}\n".format( FN),
-                            "\t\t\tTN = {0}\n".format( TN),
-                            "\t\t\trecall = {:.2f}\n".format( TP / ( TP + FN) if ( TP + FN) > 0 else 0),
-                            "\t\t\tprecision = {:.2f}\n".format( TP / ( TP + FP) if ( TP + FP) > 0 else 0)]
-            logger.info( ''.join( logging_str))
-
-        return TPs, FPs, FNs, TNs
 
 
     def get_response( self, img, tensor_name, model_path, iter = -1):
@@ -1915,9 +1202,6 @@ class DeepLabv2( object):
             total_loss = 0
             acc_loss_cnt = 0
 
-
-            
-
             wx = x0
             wy = y0
             wweight = weight0
@@ -1926,7 +1210,6 @@ class DeepLabv2( object):
                 pr_, loss = sess.run( [ self._predictor, cost], feed_dict = { self._x: wx, self._y: wy, self._keep_prob: 1.})
             else:
                 pr_, loss = sess.run( [ self._predictor, cost], feed_dict = { self._x: wx, self._y: wy, self._weight_map: wweight, self._keep_prob: 1.})
-            #x[ :, wr[ 0] : wr[ 0] + wr[ 2], wr[ 1] : wr[ 1] + wr[ 3], :] = wx[ :, pad_shape0[ 0] : -pad_shape0[ 1], pad_shape1[ 0] : -pad_shape1[ 1], :]
             x = wx
             pr += pr_
             acc_pr += 1
