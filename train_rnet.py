@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import tensorflow as tf
 import os
 import shutil
@@ -9,7 +9,7 @@ import time
 import sys
 lib_path = os.path.abspath( os.path.join( "..", "lib"))
 sys.path.append( lib_path)
-from MediVisionUnet import model_DeepLab2
+from MediVisionUnet import model_DeepLab2_bau
 from MediVisionUtil.dataset_rnet import DataSetReader
 
 class channelization( object):
@@ -117,16 +117,16 @@ if __name__ == "__main__":
                                 normalize_val = 255).read_data_sets_from_flist( test_flist)
 
     
-    refinenet = model_DeepLab2.DeepLabv2( num_channel = num_channel,
+    refinenet = model_DeepLab2_bau.DeepLabv2( num_channel = num_channel,
                  num_class = num_class, 
                  output_HW = ( 480,480),
                  is_training= True)
     
     refinenet.train( train_data,
-                "../models/deeplab/deeplab_0/temp/",
-                training_iters = 1000,
-                epochs = 150,
-                display_step = 250,
+                "../models/deeplab/deeplab_0/temp_bau/",
+                training_iters = 2000,
+                epochs = 300,
+                display_step = 500,
                 keep_prob = 1.0,
                 opt_kwargs = { "cost": "dice_coefficient",
                               "optimizer": "adam",
