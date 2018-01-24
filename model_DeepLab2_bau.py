@@ -1011,7 +1011,7 @@ class DeepLabv2( object):
             verification_x, verification_y, verification_weight = data.get_window_batch( pad_shape0, pad_shape1, verification_window_rect, 0, verification_batch_size)
             
             verification_pr, error_rate = self.output_verification_stats( sess, cost, use_weight_map, verification_x, verification_y, verification_weight)
-            data.save_prediction_img( verification_path, "_init", verification_x, verification_y, verification_pr, save_img_type = 5, mask = None)
+            data.save_prediction_img( verification_path, "_init", verification_x, verification_y, verification_pr)
 
             batch_x = np.ndarray( shape = ( ( batch_size,) + self._input_HW + ( self._num_channel,)), dtype = np.float32)
             batch_y = np.ndarray( shape = ( ( batch_size,) + self._output_HW + ( self._num_class,)), dtype = np.float32)
@@ -1058,7 +1058,7 @@ class DeepLabv2( object):
 
                 logger.info( "Epoch {:}, Average loss: {:.4f}, learning rate: {:e}".format( epoch, ( total_loss / training_iters), lr))
                 verification_pr, error_rate = self.output_verification_stats( sess, cost, use_weight_map, verification_x, verification_y, verification_weight)
-                data.save_prediction_img( verification_path, "epoch_%s" % epoch, verification_x, verification_y, verification_pr, save_img_type = 5, mask = None)
+                data.save_prediction_img( verification_path, "epoch_%s" % epoch, verification_x, verification_y, verification_pr)
                  
                 if test_data is not None:
                     error_rate, cm = self.output_test_stats( sess, cost, use_weight_map, test_data, use_average_mirror)
@@ -1080,14 +1080,24 @@ class DeepLabv2( object):
             return output_path
 
 
-    def get_response( self, img, tensor_name, model_path, iter = -1):
+    def get_response( self, img, model_path, tensor_name = None, iter = -1):
         
         with tf.Session() as sess:
             
             sess.run( tf.global_variables_initializer())
             self.restore( sess, model_path, iter)
-            #output = tf.get_default_graph().get_tensor_by_name( tensor_name)
-            response = sess.run( self._predictor, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
+            if tensor_name is not None:
+                if len(tensor_name) > 1:
+                    response = []
+                    for ii in range(len(tensor_name)):
+                        output = tf.get_default_graph().get_tensor_by_name( tensor_name[ii])
+                        response_tmp = sess.run( output, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
+                        response.append(response_tmp)
+                else:
+                    output = tf.get_default_graph().get_tensor_by_name( tensor_name)
+                    response = sess.run( output, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
+            else:
+                response = sess.run( self._predictor, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
             
             return response
 
