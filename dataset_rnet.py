@@ -19,7 +19,6 @@ class DataSet( object):
                  weight_dir,
                  img_list,
                  label_list,
-                 suffle_data,
                  resize_shape,
                  normalize_val):
         
@@ -43,14 +42,6 @@ class DataSet( object):
         self._num_examples = len( self._img_list)
 
         self._img_shape = None
-
-        if suffle_data == True:
-            perm = np.arange( self._num_examples)
-            np.random.shuffle( perm)
-            self._img_list = self._img_list[ perm]
-            self._label_list = self._label_list[ perm]
-            self._img_list0 = self._img_list0[ perm]
-            self._label_list0 = self._label_list0[ perm]
 
     @property
     def dir( self):
@@ -243,9 +234,6 @@ class DataSet( object):
 
 
     def save_prediction_img( self, save_path, img_name, batch_x, batch_y, batch_pr):
-
-        if save_img_type == 2 and batch_y.shape[ 0] != 1:
-            raise ValueError( "save_img_type == 2 and batch_y.shape[ 0] != 1")
 
         batch_size = batch_y.shape[ 0]
         height = batch_y.shape[ 1]
