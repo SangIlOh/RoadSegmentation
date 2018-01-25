@@ -26,8 +26,15 @@
     <Compile Include="make_patchdb.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="model_DeepLab2.py" />
+    <Compile Include="model_DeepLab2_bau.py" />
+    <Compile Include="refinement_GAN.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="train_all.py" />
     <Compile Include="train_rnet.py" />
+    <Compile Include="utils.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
