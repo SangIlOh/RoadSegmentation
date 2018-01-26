@@ -138,11 +138,11 @@ def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel
                 else:
                     conv1 = conv2d( pools[ -1], w1, name = "conv1")
 
-                bn_conv1 = tf.contrib.layers.batch_norm(conv1 + b1, is_training = is_training)
+                bn_conv1 = tf.layers.batch_normalization(conv1 + b1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                 h_conv1 = lrelu( bn_conv1, 0.2)
 
                 conv2 = conv2d( h_conv1, w2, name = "conv2")
-                bn_conv2 = tf.contrib.layers.batch_norm(conv2 + b2, is_training = is_training)
+                bn_conv2 = tf.layers.batch_normalization(conv2 + b2, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                 h_conv2 = lrelu( bn_conv2, 0.2)
 
 
@@ -193,11 +193,11 @@ def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel
                 b2 = bias_variable( "b_conv2", shape = [ num_feature // 2])
 
                 conv1 = conv2d_with_dropout( h_deconv_concat, w1, keep_prob, name = "conv1")
-                bn_conv1 = tf.contrib.layers.batch_norm(conv1 + b1, is_training = is_training)
+                bn_conv1 = tf.layers.batch_normalization(conv1 + b1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                 h_conv1 = tf.nn.relu( bn_conv1, "h_conv1")
 
                 conv2 = conv2d_with_dropout( h_conv1, w2, keep_prob, name = "conv2")
-                bn_conv2 = tf.contrib.layers.batch_norm(conv2 + b2, is_training = is_training)
+                bn_conv2 = tf.layers.batch_normalization(conv2 + b2, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                 h_conv2 = tf.nn.relu( bn_conv2, name = "h_conv2")
                     
                 up_h_convs.append( h_conv2)

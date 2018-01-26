@@ -62,13 +62,13 @@ class DeepLabv2( object):
                 with tf.name_scope( "layer0"):
                     w_conv1_0 = weight_variable( "W_conv1_0", shape = [ 7, 7, self._num_channel, 64], stddev = np.math.sqrt( 2.0 / ( 7 * 7 * self._num_channel)))
                     conv1 = tf.nn.conv2d( self._x, w_conv1_0, strides = [ 1, 2, 2, 1], padding = "VALID", name = "conv1")
-                    bn_conv1 = tf.contrib.layers.batch_norm(conv1, is_training = is_training)
+                    bn_conv1 = tf.layers.batch_normalization(conv1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn_conv1 = tf.nn.relu( bn_conv1, name = "bn_conv1")
                     pool1 = tf.nn.max_pool( bn_conv1, ksize = [ 1, 3, 3, 1], strides = [ 1, 2, 2, 1], padding = "VALID") # yn
 
                     w_conv2_0 = weight_variable( "W_conv2_0", shape = [ 1, 1, 64, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 64)))
                     res2a_branch1 = tf.nn.conv2d( pool1, w_conv2_0, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2a_branch1")
-                    bn2a_branch1 = tf.contrib.layers.batch_norm(res2a_branch1, is_training = is_training)
+                    bn2a_branch1 = tf.layers.batch_normalization(res2a_branch1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_0)
                     self._weights.append( w_conv2_0)
@@ -76,17 +76,17 @@ class DeepLabv2( object):
                 with tf.name_scope( "layer1"):
                     w_conv1_1 = weight_variable( "W_conv1_1", shape = [ 1, 1, 64, 64], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 64)))
                     res2a_branch2a = tf.nn.conv2d( pool1, w_conv1_1, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2a_branch2a")
-                    bn2a_branch2a = tf.contrib.layers.batch_norm(res2a_branch2a, is_training = is_training)
+                    bn2a_branch2a = tf.layers.batch_normalization(res2a_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2a_branch2a = tf.nn.relu( bn2a_branch2a, name = "bn2a_branch2a")
 
                     w_conv2_1 = weight_variable( "W_conv2_1", shape = [ 3, 3, 64, 64], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 64)))
                     res2a_branch2b = tf.nn.conv2d( bn2a_branch2a, w_conv2_1, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2a_branch2b")
-                    bn2a_branch2b = tf.contrib.layers.batch_norm(res2a_branch2b, is_training = is_training)
+                    bn2a_branch2b = tf.layers.batch_normalization(res2a_branch2baxis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2a_branch2b = tf.nn.relu( bn2a_branch2b, name = "bn2a_branch2b")
 
                     w_conv3_1 = weight_variable( "W_conv3_1", shape = [ 1, 1, 64, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 64)))
                     res2a_branch2c = tf.nn.conv2d( bn2a_branch2b, w_conv3_1, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2a_branch2c")
-                    bn2a_branch2c = tf.contrib.layers.batch_norm(res2a_branch2c, is_training = is_training)
+                    bn2a_branch2c = tf.layers.batch_normalization(res2a_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_1)
                     self._weights.append( w_conv2_1)
@@ -98,17 +98,17 @@ class DeepLabv2( object):
 
                     w_conv1_2 = weight_variable( "W_conv1_2", shape = [ 1, 1, 256, 64], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res2b_branch2a = tf.nn.conv2d( res2a_relu, w_conv1_2, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2b_branch2a")
-                    bn2b_branch2a = tf.contrib.layers.batch_norm(res2b_branch2a, is_training = is_training)
+                    bn2b_branch2a = tf.layers.batch_normalization(res2b_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2b_branch2a = tf.nn.relu( bn2b_branch2a, name = "bn2b_branch2a")
 
                     w_conv2_2 = weight_variable( "W_conv2_2", shape = [ 3, 3, 64, 64], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 64)))
                     res2b_branch2b = tf.nn.conv2d( bn2b_branch2a, w_conv2_2, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2b_branch2b")
-                    bn2b_branch2b = tf.contrib.layers.batch_norm(res2b_branch2b, is_training = is_training)
+                    bn2b_branch2b = tf.layers.batch_normalization(res2b_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2b_branch2b = tf.nn.relu( bn2b_branch2b, name = "bn2b_branch2b")
 
                     w_conv3_2 = weight_variable( "W_conv3_2", shape = [ 1, 1, 64, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 64)))
                     res2b_branch2c = tf.nn.conv2d( bn2b_branch2b, w_conv3_2, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2b_branch2c")
-                    bn2b_branch2c = tf.contrib.layers.batch_norm(res2b_branch2c, is_training = is_training)
+                    bn2b_branch2c = tf.layers.batch_normalization(res2b_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_2)
                     self._weights.append( w_conv2_2)
@@ -120,17 +120,17 @@ class DeepLabv2( object):
 
                     w_conv1_3 = weight_variable( "W_conv1_3", shape = [ 1, 1, 256, 64], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res2c_branch2a = tf.nn.conv2d( res2b_relu, w_conv1_3, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2c_branch2a")
-                    bn2c_branch2a = tf.contrib.layers.batch_norm(res2c_branch2a, is_training = is_training)
+                    bn2c_branch2a = tf.layers.batch_normalization(res2c_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2c_branch2a = tf.nn.relu( bn2c_branch2a, name = "bn2c_branch2a")
 
                     w_conv2_3 = weight_variable( "W_conv2_3", shape = [ 3, 3, 64, 64], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 64)))
                     res2c_branch2b = tf.nn.conv2d( bn2c_branch2a, w_conv2_3, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2c_branch2b")
-                    bn2c_branch2b = tf.contrib.layers.batch_norm(res2c_branch2b, is_training = is_training)
+                    bn2c_branch2b = tf.layers.batch_normalization(res2c_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2c_branch2b = tf.nn.relu( bn2c_branch2b, name = "bn2c_branch2b")
 
                     w_conv3_3 = weight_variable( "W_conv3_3", shape = [ 1, 1, 64, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 64)))
                     res2c_branch2c = tf.nn.conv2d( bn2c_branch2b, w_conv3_3, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2c_branch2c")
-                    bn2c_branch2c = tf.contrib.layers.batch_norm(res2c_branch2c, is_training = is_training)
+                    bn2c_branch2c = tf.layers.batch_normalization(res2c_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_3)
                     self._weights.append( w_conv2_3)
@@ -143,24 +143,24 @@ class DeepLabv2( object):
 
                     w_conv1_4 = weight_variable( "W_conv1_4", shape = [ 1, 1, 256, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res3a_branch1 = tf.nn.conv2d( res2c_relu, w_conv1_4, strides = [ 1, 2, 2, 1], padding = "VALID", name = "res3a_branch1")
-                    bn3a_branch1 = tf.contrib.layers.batch_norm(res3a_branch1, is_training = is_training)
+                    bn3a_branch1 = tf.layers.batch_normalization(res3a_branch1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_4)
 
                 with tf.name_scope( "layer_5" ):
                     w_conv1_5 = weight_variable( "W_conv1_5", shape = [ 1, 1, 256, 128], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res3a_branch2a = tf.nn.conv2d( res2c_relu, w_conv1_5, strides = [ 1, 2, 2, 1], padding = "VALID", name = "res3a_branch2a")
-                    bn3a_branch2a = tf.contrib.layers.batch_norm(res3a_branch2a, is_training = is_training)
+                    bn3a_branch2a = tf.layers.batch_normalization(res3a_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3a_branch2a = tf.nn.relu( bn3a_branch2a, name = "bn3a_branch2a")
 
                     w_conv2_5 = weight_variable( "W_conv2_5", shape = [ 3, 3, 128, 128], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 128)))
                     res3a_branch2b = tf.nn.conv2d( bn3a_branch2a, w_conv2_5, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3a_branch2b")
-                    bn3a_branch2b = tf.contrib.layers.batch_norm(res3a_branch2b, is_training = is_training)
+                    bn3a_branch2b = tf.layers.batch_normalization(res3a_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3a_branch2b = tf.nn.relu( bn3a_branch2b, name = "bn3a_branch2b")
 
                     w_conv3_5 = weight_variable( "W_conv3_5", shape = [ 1, 1, 128, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 128)))
                     res3a_branch2c = tf.nn.conv2d( bn3a_branch2b, w_conv3_5, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3a_branch2c")
-                    bn3a_branch2c = tf.contrib.layers.batch_norm(res3a_branch2c, is_training = is_training)
+                    bn3a_branch2c = tf.layers.batch_normalization(res3a_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_5)
                     self._weights.append( w_conv2_5)
@@ -172,17 +172,17 @@ class DeepLabv2( object):
 
                     w_conv1_6 = weight_variable( "W_conv1_6", shape = [ 1, 1, 512, 128], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res3b1_branch2a = tf.nn.conv2d( res3a_relu, w_conv1_6, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b1_branch2a")
-                    bn3b1_branch2a = tf.contrib.layers.batch_norm(res3b1_branch2a, is_training = is_training)
+                    bn3b1_branch2a = tf.layers.batch_normalization(res3b1_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3b1_branch2a = tf.nn.relu( bn3b1_branch2a, name = "bn3b1_branch2a")
 
                     w_conv2_6 = weight_variable( "W_conv2_6", shape = [ 3, 3, 128, 128], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 128)))
                     res3b1_branch2b = tf.nn.conv2d( bn3b1_branch2a, w_conv2_6, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b1_branch2b")
-                    bn3b1_branch2b = tf.contrib.layers.batch_norm(res3b1_branch2b, is_training = is_training)
+                    bn3b1_branch2b = tf.layers.batch_normalization(res3b1_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3b1_branch2b = tf.nn.relu( bn3b1_branch2b, name = "bn3b1_branch2b")
 
                     w_conv3_6 = weight_variable( "W_conv3_6", shape = [ 1, 1, 128, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 128)))
                     res3b1_branch2c = tf.nn.conv2d( bn3b1_branch2b, w_conv3_6, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b1_branch2c")
-                    bn3b1_branch2c = tf.contrib.layers.batch_norm(res3b1_branch2c, is_training = is_training)
+                    bn3b1_branch2c = tf.layers.batch_normalization(res3b1_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_6)
                     self._weights.append( w_conv2_6)
@@ -194,17 +194,17 @@ class DeepLabv2( object):
 
                     w_conv1_7 = weight_variable( "W_conv1_7", shape = [ 1, 1, 512, 128], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res3b2_branch2a = tf.nn.conv2d( res3b1_relu, w_conv1_7, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b2_branch2a")
-                    bn3b2_branch2a = tf.contrib.layers.batch_norm(res3b2_branch2a, is_training = is_training)
+                    bn3b2_branch2a = tf.layers.batch_normalization(res3b2_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3b2_branch2a = tf.nn.relu( bn3b2_branch2a, name = "bn3b2_branch2a")
 
                     w_conv2_7 = weight_variable( "W_conv2_7", shape = [ 3, 3, 128, 128], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 128)))
                     res3b2_branch2b = tf.nn.conv2d( bn3b2_branch2a, w_conv2_7, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b2_branch2b")
-                    bn3b2_branch2b = tf.contrib.layers.batch_norm(res3b2_branch2b, is_training = is_training)
+                    bn3b2_branch2b = tf.layers.batch_normalization(res3b2_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3b2_branch2b = tf.nn.relu( bn3b1_branch2b, name = "bn3b2_branch2b")
 
                     w_conv3_7 = weight_variable( "W_conv3_7", shape = [ 1, 1, 128, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 128)))
                     res3b2_branch2c = tf.nn.conv2d( bn3b2_branch2b, w_conv3_7, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b2_branch2c")
-                    bn3b2_branch2c = tf.contrib.layers.batch_norm(res3b2_branch2c, is_training = is_training)
+                    bn3b2_branch2c = tf.layers.batch_normalization(res3b2_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_7)
                     self._weights.append( w_conv2_7)
@@ -216,17 +216,17 @@ class DeepLabv2( object):
 
                     w_conv1_8 = weight_variable( "W_conv1_8", shape = [ 1, 1, 512, 128], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res3b3_branch2a = tf.nn.conv2d( res3b2_relu, w_conv1_8, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b3_branch2a")
-                    bn3b3_branch2a = tf.contrib.layers.batch_norm(res3b3_branch2a, is_training = is_training)
+                    bn3b3_branch2a = tf.layers.batch_normalization(res3b3_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3b3_branch2a = tf.nn.relu( bn3b2_branch2a, name = "bn3b3_branch2a")
 
                     w_conv2_8 = weight_variable( "W_conv2_8", shape = [ 3, 3, 128, 128], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 128)))
                     res3b3_branch2b = tf.nn.conv2d( bn3b3_branch2a, w_conv2_8, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b3_branch2b")
-                    bn3b3_branch2b = tf.contrib.layers.batch_norm(res3b3_branch2b, is_training = is_training)
+                    bn3b3_branch2b = tf.layers.batch_normalization(res3b3_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn3b3_branch2b = tf.nn.relu( bn3b3_branch2b, name = "bn3b3_branch2b")
 
                     w_conv3_8 = weight_variable( "W_conv3_8", shape = [ 1, 1, 128, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 128)))
                     res3b3_branch2c = tf.nn.conv2d( bn3b3_branch2b, w_conv3_8, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res3b3_branch2c")
-                    bn3b3_branch2c = tf.contrib.layers.batch_norm(res3b3_branch2c, is_training = is_training)
+                    bn3b3_branch2c = tf.layers.batch_normalization(res3b3_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_8)
                     self._weights.append( w_conv2_8)
@@ -238,24 +238,24 @@ class DeepLabv2( object):
 
                     w_conv1_9 = weight_variable( "W_conv1_9", shape = [ 1, 1, 512, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res4a_branch1 = tf.nn.conv2d( res3b3_relu, w_conv1_9, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4a_branch1")
-                    bn4a_branch1 = tf.contrib.layers.batch_norm(res4a_branch1, is_training = is_training)
+                    bn4a_branch1 = tf.layers.batch_normalization(res4a_branch1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_9)
 
                 with tf.name_scope( "layer_10" ):
                     w_conv1_10 = weight_variable( "W_conv1_10", shape = [ 1, 1, 512, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res4a_branch2a = tf.nn.conv2d( res3b3_relu, w_conv1_10, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4a_branch2a")
-                    bn4a_branch2a = tf.contrib.layers.batch_norm(res4a_branch2a, is_training = is_training)
+                    bn4a_branch2a = tf.layers.batch_normalization(res4a_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4a_branch2a = tf.nn.relu( bn4a_branch2a, name = "bn4a_branch2a")
 
                     w_conv2_10 = weight_variable( "W_conv2_10", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4a_branch2b = tf.nn.atrous_conv2d( bn4a_branch2a, w_conv2_10, rate = 2, padding = "SAME", name = "res4a_branch2b")
-                    bn4a_branch2b = tf.contrib.layers.batch_norm(res4a_branch2b, is_training = is_training)
+                    bn4a_branch2b = tf.layers.batch_normalization(res4a_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4a_branch2b = tf.nn.relu( bn4a_branch2b, name = "bn4a_branch2b")
 
                     w_conv3_10 = weight_variable( "W_conv3_10", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4a_branch2c = tf.nn.conv2d( bn4a_branch2b, w_conv3_10, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4a_branch2c")
-                    bn4a_branch2c = tf.contrib.layers.batch_norm(res4a_branch2c, is_training = is_training)
+                    bn4a_branch2c = tf.layers.batch_normalization(res4a_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_10)
                     self._weights.append( w_conv2_10)
@@ -267,17 +267,17 @@ class DeepLabv2( object):
 
                     w_conv1_11 = weight_variable( "W_conv1_11", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b1_branch2a = tf.nn.conv2d( res4a_relu, w_conv1_11, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b1_branch2a")
-                    bn4b1_branch2a = tf.contrib.layers.batch_norm(res4b1_branch2a, is_training = is_training)
+                    bn4b1_branch2a = tf.layers.batch_normalization(res4b1_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b1_branch2a = tf.nn.relu( bn4b1_branch2a, name = "bn4b1_branch2a")
 
                     w_conv2_11 = weight_variable( "W_conv2_11", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b1_branch2b = tf.nn.atrous_conv2d( bn4b1_branch2a, w_conv2_11, rate = 2, padding = "SAME", name = "res4b1_branch2b")
-                    bn4b1_branch2b = tf.contrib.layers.batch_norm(res4b1_branch2b, is_training = is_training)
+                    bn4b1_branch2b = tf.layers.batch_normalization(res4b1_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b1_branch2b = tf.nn.relu( bn4b1_branch2b, name = "bn4b1_branch2b")
 
                     w_conv3_11 = weight_variable( "W_conv3_11", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b1_branch2c = tf.nn.conv2d( bn4b1_branch2b, w_conv3_11, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b1_branch2c")
-                    bn4b1_branch2c = tf.contrib.layers.batch_norm(res4b1_branch2c, is_training = is_training)
+                    bn4b1_branch2c = tf.layers.batch_normalization(res4b1_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_11)
                     self._weights.append( w_conv2_11)
@@ -289,17 +289,17 @@ class DeepLabv2( object):
 
                     w_conv1_12 = weight_variable( "W_conv1_12", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b2_branch2a = tf.nn.conv2d( res4b1_relu, w_conv1_12, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b2_branch2a")
-                    bn4b2_branch2a = tf.contrib.layers.batch_norm(res4b2_branch2a, is_training = is_training)
+                    bn4b2_branch2a = tf.layers.batch_normalization(res4b2_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b2_branch2a = tf.nn.relu( bn4b1_branch2a, name = "bn4b2_branch2a")
 
                     w_conv2_12 = weight_variable( "W_conv2_12", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b2_branch2b = tf.nn.atrous_conv2d( bn4b2_branch2a, w_conv2_12, rate = 2, padding = "SAME", name = "res4b2_branch2b")
-                    bn4b2_branch2b = tf.contrib.layers.batch_norm(res4b2_branch2b, is_training = is_training)
+                    bn4b2_branch2b = tf.layers.batch_normalization(res4b2_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b2_branch2b = tf.nn.relu( bn4b2_branch2b, name = "bn4b2_branch2b")
 
                     w_conv3_12 = weight_variable( "W_conv3_12", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b2_branch2c = tf.nn.conv2d( bn4b2_branch2b, w_conv3_12, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b2_branch2c")
-                    bn4b2_branch2c = tf.contrib.layers.batch_norm(res4b2_branch2c, is_training = is_training)
+                    bn4b2_branch2c = tf.layers.batch_normalization(res4b2_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_12)
                     self._weights.append( w_conv2_12)
@@ -311,17 +311,17 @@ class DeepLabv2( object):
 
                     w_conv1_13 = weight_variable( "W_conv1_13", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b3_branch2a = tf.nn.conv2d( res4b2_relu, w_conv1_13, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b3_branch2a")
-                    bn4b3_branch2a = tf.contrib.layers.batch_norm(res4b3_branch2a, is_training = is_training)
+                    bn4b3_branch2a = tf.layers.batch_normalization(res4b3_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b3_branch2a = tf.nn.relu( bn4b3_branch2a, name = "bn4b3_branch2a")
 
                     w_conv2_13 = weight_variable( "W_conv2_13", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b3_branch2b = tf.nn.atrous_conv2d( bn4b3_branch2a, w_conv2_13, rate = 2, padding = "SAME", name = "res4b3_branch2b")
-                    bn4b3_branch2b = tf.contrib.layers.batch_norm(res4b3_branch2b, is_training = is_training)
+                    bn4b3_branch2b = tf.layers.batch_normalization(res4b3_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b3_branch2b = tf.nn.relu( bn4b3_branch2b, name = "bn4b3_branch2b")
 
                     w_conv3_13 = weight_variable( "W_conv3_13", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b3_branch2c = tf.nn.conv2d( bn4b3_branch2b, w_conv3_13, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b3_branch2c")
-                    bn4b3_branch2c = tf.contrib.layers.batch_norm(res4b3_branch2c, is_training = is_training)
+                    bn4b3_branch2c = tf.layers.batch_normalization(res4b3_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_13)
                     self._weights.append( w_conv2_13)
@@ -333,17 +333,17 @@ class DeepLabv2( object):
 
                     w_conv1_14 = weight_variable( "W_conv1_14", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b4_branch2a = tf.nn.conv2d( res4b3_relu, w_conv1_14, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b4_branch2a")
-                    bn4b4_branch2a = tf.contrib.layers.batch_norm(res4b4_branch2a, is_training = is_training)
+                    bn4b4_branch2a = tf.layers.batch_normalization(res4b4_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b4_branch2a = tf.nn.relu( bn4b4_branch2a, name = "bn4b4_branch2a")
 
                     w_conv2_14 = weight_variable( "W_conv2_14", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b4_branch2b = tf.nn.atrous_conv2d( bn4b4_branch2a, w_conv2_14, rate = 2, padding = "SAME", name = "res4b4_branch2b")
-                    bn4b4_branch2b = tf.contrib.layers.batch_norm(res4b4_branch2b, is_training = is_training)
+                    bn4b4_branch2b = tf.layers.batch_normalization(res4b4_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b4_branch2b = tf.nn.relu( bn4b4_branch2b, name = "bn4b4_branch2b")
 
                     w_conv3_14 = weight_variable( "W_conv3_14", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b4_branch2c = tf.nn.conv2d( bn4b4_branch2b, w_conv3_14, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b4_branch2c")
-                    bn4b4_branch2c = tf.contrib.layers.batch_norm(res4b4_branch2c, is_training = is_training)
+                    bn4b4_branch2c = tf.layers.batch_normalization(res4b4_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_14)
                     self._weights.append( w_conv2_14)
@@ -355,17 +355,17 @@ class DeepLabv2( object):
 
                     w_conv1_15 = weight_variable( "W_conv1_15", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b5_branch2a = tf.nn.conv2d( res4b4_relu, w_conv1_15, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b5_branch2a")
-                    bn4b5_branch2a = tf.contrib.layers.batch_norm(res4b5_branch2a, is_training = is_training)
+                    bn4b5_branch2a = tf.layers.batch_normalization(res4b5_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b5_branch2a = tf.nn.relu( bn4b5_branch2a, name = "bn4b5_branch2a")
 
                     w_conv2_15 = weight_variable( "W_conv2_15", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b5_branch2b = tf.nn.atrous_conv2d( bn4b5_branch2a, w_conv2_15, rate = 2, padding = "SAME", name = "res4b5_branch2b")
-                    bn4b5_branch2b = tf.contrib.layers.batch_norm(res4b5_branch2b, is_training = is_training)
+                    bn4b5_branch2b = tf.layers.batch_normalization(res4b5_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b5_branch2b = tf.nn.relu( bn4b5_branch2b, name = "bn4b5_branch2b")
 
                     w_conv3_15 = weight_variable( "W_conv3_15", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b5_branch2c = tf.nn.conv2d( bn4b5_branch2b, w_conv3_15, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b5_branch2c")
-                    bn4b5_branch2c = tf.contrib.layers.batch_norm(res4b5_branch2c, is_training = is_training)
+                    bn4b5_branch2c = tf.layers.batch_normalization(res4b5_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_15)
                     self._weights.append( w_conv2_15)
@@ -377,17 +377,17 @@ class DeepLabv2( object):
 
                     w_conv1_16 = weight_variable( "W_conv1_16", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b6_branch2a = tf.nn.conv2d( res4b5_relu, w_conv1_16, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b6_branch2a")
-                    bn4b6_branch2a = tf.contrib.layers.batch_norm(res4b6_branch2a, is_training = is_training)
+                    bn4b6_branch2a = tf.layers.batch_normalization(res4b6_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b6_branch2a = tf.nn.relu( bn4b6_branch2a, name = "bn4b6_branch2a")
 
                     w_conv2_16 = weight_variable( "W_conv2_16", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b6_branch2b = tf.nn.atrous_conv2d( bn4b6_branch2a, w_conv2_16, rate = 2, padding = "SAME", name = "res4b6_branch2b")
-                    bn4b6_branch2b = tf.contrib.layers.batch_norm(res4b6_branch2b, is_training = is_training)
+                    bn4b6_branch2b = tf.layers.batch_normalization(res4b6_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b6_branch2b = tf.nn.relu( bn4b6_branch2b, name = "bn4b6_branch2b")
 
                     w_conv3_16 = weight_variable( "W_conv3_16", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b6_branch2c = tf.nn.conv2d( bn4b6_branch2b, w_conv3_16, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b6_branch2c")
-                    bn4b6_branch2c = tf.contrib.layers.batch_norm(res4b6_branch2c, is_training = is_training)
+                    bn4b6_branch2c = tf.layers.batch_normalization(res4b6_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_16)
                     self._weights.append( w_conv2_16)
@@ -399,17 +399,17 @@ class DeepLabv2( object):
 
                     w_conv1_17 = weight_variable( "W_conv1_17", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b7_branch2a = tf.nn.conv2d( res4b6_relu, w_conv1_17, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b7_branch2a")
-                    bn4b7_branch2a = tf.contrib.layers.batch_norm(res4b7_branch2a, is_training = is_training)
+                    bn4b7_branch2a = tf.layers.batch_normalization(res4b7_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b7_branch2a = tf.nn.relu( bn4b7_branch2a, name = "bn4b7_branch2a")
 
                     w_conv2_17 = weight_variable( "W_conv2_17", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b7_branch2b = tf.nn.atrous_conv2d( bn4b7_branch2a, w_conv2_17, rate = 2, padding = "SAME", name = "res4b7_branch2b")
-                    bn4b7_branch2b = tf.contrib.layers.batch_norm(res4b7_branch2b, is_training = is_training)
+                    bn4b7_branch2b = tf.layers.batch_normalization(res4b7_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b7_branch2b = tf.nn.relu( bn4b7_branch2b, name = "bn4b7_branch2b")
 
                     w_conv3_17 = weight_variable( "W_conv3_17", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b7_branch2c = tf.nn.conv2d( bn4b7_branch2b, w_conv3_17, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b7_branch2c")
-                    bn4b7_branch2c = tf.contrib.layers.batch_norm(res4b7_branch2c, is_training = is_training)
+                    bn4b7_branch2c = tf.layers.batch_normalization(res4b7_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_17)
                     self._weights.append( w_conv2_17)
@@ -421,17 +421,17 @@ class DeepLabv2( object):
 
                     w_conv1_18 = weight_variable( "W_conv1_18", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b8_branch2a = tf.nn.conv2d( res4b7_relu, w_conv1_18, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b8_branch2a")
-                    bn4b8_branch2a = tf.contrib.layers.batch_norm(res4b8_branch2a, is_training = is_training)
+                    bn4b8_branch2a = tf.layers.batch_normalization(res4b8_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b8_branch2a = tf.nn.relu( bn4b8_branch2a, name = "bn4b8_branch2a")
 
                     w_conv2_18 = weight_variable( "W_conv2_18", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b8_branch2b = tf.nn.atrous_conv2d( bn4b8_branch2a, w_conv2_18, rate = 2, padding = "SAME", name = "res4b8_branch2b")
-                    bn4b8_branch2b = tf.contrib.layers.batch_norm(res4b8_branch2b, is_training = is_training)
+                    bn4b8_branch2b = tf.layers.batch_normalization(res4b8_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b8_branch2b = tf.nn.relu( bn4b8_branch2b, name = "bn4b8_branch2b")
 
                     w_conv3_18 = weight_variable( "W_conv3_18", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b8_branch2c = tf.nn.conv2d( bn4b8_branch2b, w_conv3_18, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b8_branch2c")
-                    bn4b8_branch2c = tf.contrib.layers.batch_norm(res4b8_branch2c, is_training = is_training)
+                    bn4b8_branch2c = tf.layers.batch_normalization(res4b8_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_18)
                     self._weights.append( w_conv2_18)
@@ -443,17 +443,17 @@ class DeepLabv2( object):
 
                     w_conv1_19 = weight_variable( "W_conv1_19", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b9_branch2a = tf.nn.conv2d( res4b8_relu, w_conv1_19, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b9_branch2a")
-                    bn4b9_branch2a = tf.contrib.layers.batch_norm(res4b9_branch2a, is_training = is_training)
+                    bn4b9_branch2a = tf.layers.batch_normalization(res4b9_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b9_branch2a = tf.nn.relu( bn4b9_branch2a, name = "bn4b9_branch2a")
 
                     w_conv2_19 = weight_variable( "W_conv2_19", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b9_branch2b = tf.nn.atrous_conv2d( bn4b9_branch2a, w_conv2_19, rate = 2, padding = "SAME", name = "res4b9_branch2b")
-                    bn4b9_branch2b = tf.contrib.layers.batch_norm(res4b9_branch2b, is_training = is_training)
+                    bn4b9_branch2b = tf.layers.batch_normalization(res4b9_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b9_branch2b = tf.nn.relu( bn4b9_branch2b, name = "bn4b9_branch2b")
 
                     w_conv3_19 = weight_variable( "W_conv3_19", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b9_branch2c = tf.nn.conv2d( bn4b9_branch2b, w_conv3_19, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b9_branch2c")
-                    bn4b9_branch2c = tf.contrib.layers.batch_norm(res4b9_branch2c, is_training = is_training)
+                    bn4b9_branch2c = tf.layers.batch_normalization(res4b9_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_19)
                     self._weights.append( w_conv2_19)
@@ -465,17 +465,17 @@ class DeepLabv2( object):
 
                     w_conv1_20 = weight_variable( "W_conv1_20", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b10_branch2a = tf.nn.conv2d( res4b9_relu, w_conv1_20, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b10_branch2a")
-                    bn4b10_branch2a = tf.contrib.layers.batch_norm(res4b10_branch2a, is_training = is_training)
+                    bn4b10_branch2a = tf.layers.batch_normalization(res4b10_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b10_branch2a = tf.nn.relu( bn4b10_branch2a, name = "bn4b10_branch2a")
 
                     w_conv2_20 = weight_variable( "W_conv2_20", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b10_branch2b = tf.nn.atrous_conv2d( bn4b10_branch2a, w_conv2_20, rate = 2, padding = "SAME", name = "res4b10_branch2b")
-                    bn4b10_branch2b = tf.contrib.layers.batch_norm(res4b10_branch2b, is_training = is_training)
+                    bn4b10_branch2b = tf.layers.batch_normalization(res4b10_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b10_branch2b = tf.nn.relu( bn4b10_branch2b, name = "bn4b10_branch2b")
 
                     w_conv3_20 = weight_variable( "W_conv3_20", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b10_branch2c = tf.nn.conv2d( bn4b10_branch2b, w_conv3_20, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b10_branch2c")
-                    bn4b10_branch2c = tf.contrib.layers.batch_norm(res4b10_branch2c, is_training = is_training)
+                    bn4b10_branch2c = tf.layers.batch_normalization(res4b10_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_20)
                     self._weights.append( w_conv2_20)
@@ -487,17 +487,17 @@ class DeepLabv2( object):
 
                     w_conv1_21 = weight_variable( "W_conv1_21", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b11_branch2a = tf.nn.conv2d( res4b10_relu, w_conv1_21, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b11_branch2a")
-                    bn4b11_branch2a = tf.contrib.layers.batch_norm(res4b11_branch2a, is_training = is_training)
+                    bn4b11_branch2a = tf.layers.batch_normalization(res4b11_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b11_branch2a = tf.nn.relu( bn4b11_branch2a, name = "bn4b11_branch2a")
 
                     w_conv2_21 = weight_variable( "W_conv2_21", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b11_branch2b = tf.nn.atrous_conv2d( bn4b11_branch2a, w_conv2_21, rate = 2, padding = "SAME", name = "res4b11_branch2b")
-                    bn4b11_branch2b = tf.contrib.layers.batch_norm(res4b11_branch2b, is_training = is_training)
+                    bn4b11_branch2b = tf.layers.batch_normalization(res4b11_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b11_branch2b = tf.nn.relu( bn4b11_branch2b, name = "bn4b11_branch2b")
 
                     w_conv3_21 = weight_variable( "W_conv3_21", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b11_branch2c = tf.nn.conv2d( bn4b11_branch2b, w_conv3_21, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b11_branch2c")
-                    bn4b11_branch2c = tf.contrib.layers.batch_norm(res4b11_branch2c, is_training = is_training)
+                    bn4b11_branch2c = tf.layers.batch_normalization(res4b11_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_21)
                     self._weights.append( w_conv2_21)
@@ -509,17 +509,17 @@ class DeepLabv2( object):
 
                     w_conv1_22 = weight_variable( "W_conv1_22", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b12_branch2a = tf.nn.conv2d( res4b11_relu, w_conv1_22, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b12_branch2a")
-                    bn4b12_branch2a = tf.contrib.layers.batch_norm(res4b12_branch2a, is_training = is_training)
+                    bn4b12_branch2a = tf.layers.batch_normalization(res4b12_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b12_branch2a = tf.nn.relu( bn4b12_branch2a, name = "bn4b12_branch2a")
 
                     w_conv2_22 = weight_variable( "W_conv2_22", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b12_branch2b = tf.nn.atrous_conv2d( bn4b12_branch2a, w_conv2_22, rate = 2, padding = "SAME", name = "res4b12_branch2b")
-                    bn4b12_branch2b = tf.contrib.layers.batch_norm(res4b12_branch2b, is_training = is_training)
+                    bn4b12_branch2b = tf.layers.batch_normalization(res4b12_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b12_branch2b = tf.nn.relu( bn4b12_branch2b, name = "bn4b12_branch2b")
 
                     w_conv3_22 = weight_variable( "W_conv3_22", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b12_branch2c = tf.nn.conv2d( bn4b12_branch2b, w_conv3_22, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b12_branch2c")
-                    bn4b12_branch2c = tf.contrib.layers.batch_norm(res4b12_branch2c, is_training = is_training)
+                    bn4b12_branch2c = tf.layers.batch_normalization(res4b12_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_22)
                     self._weights.append( w_conv2_22)
@@ -531,17 +531,17 @@ class DeepLabv2( object):
 
                     w_conv1_23 = weight_variable( "W_conv1_23", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b13_branch2a = tf.nn.conv2d( res4b12_relu, w_conv1_23, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b13_branch2a")
-                    bn4b13_branch2a = tf.contrib.layers.batch_norm(res4b13_branch2a, is_training = is_training)
+                    bn4b13_branch2a = tf.layers.batch_normalization(res4b13_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b13_branch2a = tf.nn.relu( bn4b13_branch2a, name = "bn4b13_branch2a")
 
                     w_conv2_23 = weight_variable( "W_conv2_23", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b13_branch2b = tf.nn.atrous_conv2d( bn4b13_branch2a, w_conv2_23, rate = 2, padding = "SAME", name = "res4b13_branch2b")
-                    bn4b13_branch2b = tf.contrib.layers.batch_norm(res4b13_branch2b, is_training = is_training)
+                    bn4b13_branch2b = tf.layers.batch_normalization(res4b13_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b13_branch2b = tf.nn.relu( bn4b13_branch2b, name = "bn4b13_branch2b")
 
                     w_conv3_23 = weight_variable( "W_conv3_23", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b13_branch2c = tf.nn.conv2d( bn4b13_branch2b, w_conv3_23, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b13_branch2c")
-                    bn4b13_branch2c = tf.contrib.layers.batch_norm(res4b13_branch2c, is_training = is_training)
+                    bn4b13_branch2c = tf.layers.batch_normalization(res4b13_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_23)
                     self._weights.append( w_conv2_23)
@@ -553,17 +553,17 @@ class DeepLabv2( object):
 
                     w_conv1_24 = weight_variable( "W_conv1_24", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b14_branch2a = tf.nn.conv2d( res4b13_relu, w_conv1_24, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b14_branch2a")
-                    bn4b14_branch2a = tf.contrib.layers.batch_norm(res4b14_branch2a, is_training = is_training)
+                    bn4b14_branch2a = tf.layers.batch_normalization(res4b14_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b14_branch2a = tf.nn.relu( bn4b14_branch2a, name = "bn4b14_branch2a")
 
                     w_conv2_24 = weight_variable( "W_conv2_24", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b14_branch2b = tf.nn.atrous_conv2d( bn4b14_branch2a, w_conv2_24, rate = 2, padding = "SAME", name = "res4b14_branch2b")
-                    bn4b14_branch2b = tf.contrib.layers.batch_norm(res4b14_branch2b, is_training = is_training)
+                    bn4b14_branch2b = tf.layers.batch_normalization(res4b14_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b14_branch2b = tf.nn.relu( bn4b14_branch2b, name = "bn4b14_branch2b")
 
                     w_conv3_24 = weight_variable( "W_conv3_24", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b14_branch2c = tf.nn.conv2d( bn4b14_branch2b, w_conv3_24, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b14_branch2c")
-                    bn4b14_branch2c = tf.contrib.layers.batch_norm(res4b14_branch2c, is_training = is_training)
+                    bn4b14_branch2c = tf.layers.batch_normalization(res4b14_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_24)
                     self._weights.append( w_conv2_24)
@@ -575,17 +575,17 @@ class DeepLabv2( object):
 
                     w_conv1_25 = weight_variable( "W_conv1_25", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b15_branch2a = tf.nn.conv2d( res4b14_relu, w_conv1_25, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b15_branch2a")
-                    bn4b15_branch2a = tf.contrib.layers.batch_norm(res4b15_branch2a, is_training = is_training)
+                    bn4b15_branch2a = tf.layers.batch_normalization(res4b15_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b15_branch2a = tf.nn.relu( bn4b15_branch2a, name = "bn4b15_branch2a")
 
                     w_conv2_25 = weight_variable( "W_conv2_25", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b15_branch2b = tf.nn.atrous_conv2d( bn4b15_branch2a, w_conv2_25, rate = 2, padding = "SAME", name = "res4b15_branch2b")
-                    bn4b15_branch2b = tf.contrib.layers.batch_norm(res4b15_branch2b, is_training = is_training)
+                    bn4b15_branch2b = tf.layers.batch_normalization(res4b15_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b15_branch2b = tf.nn.relu( bn4b15_branch2b, name = "bn4b15_branch2b")
 
                     w_conv3_25 = weight_variable( "W_conv3_25", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b15_branch2c = tf.nn.conv2d( bn4b15_branch2b, w_conv3_25, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b15_branch2c")
-                    bn4b15_branch2c = tf.contrib.layers.batch_norm(res4b15_branch2c, is_training = is_training)
+                    bn4b15_branch2c = tf.layers.batch_normalization(res4b15_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_25)
                     self._weights.append( w_conv2_25)
@@ -597,17 +597,17 @@ class DeepLabv2( object):
 
                     w_conv1_26 = weight_variable( "W_conv1_26", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b16_branch2a = tf.nn.conv2d( res4b15_relu, w_conv1_26, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b16_branch2a")
-                    bn4b16_branch2a = tf.contrib.layers.batch_norm(res4b16_branch2a, is_training = is_training)
+                    bn4b16_branch2a = tf.layers.batch_normalization(res4b16_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b16_branch2a = tf.nn.relu( bn4b16_branch2a, name = "bn4b16_branch2a")
 
                     w_conv2_26 = weight_variable( "W_conv2_26", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b16_branch2b = tf.nn.atrous_conv2d( bn4b16_branch2a, w_conv2_26, rate = 2, padding = "SAME", name = "res4b16_branch2b")
-                    bn4b16_branch2b = tf.contrib.layers.batch_norm(res4b16_branch2b, is_training = is_training)
+                    bn4b16_branch2b = tf.layers.batch_normalization(res4b16_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b16_branch2b = tf.nn.relu( bn4b16_branch2b, name = "bn4b16_branch2b")
 
                     w_conv3_26 = weight_variable( "W_conv3_26", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b16_branch2c = tf.nn.conv2d( bn4b16_branch2b, w_conv3_26, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b16_branch2c")
-                    bn4b16_branch2c = tf.contrib.layers.batch_norm(res4b16_branch2c, is_training = is_training)
+                    bn4b16_branch2c = tf.layers.batch_normalization(res4b16_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_26)
                     self._weights.append( w_conv2_26)
@@ -619,17 +619,17 @@ class DeepLabv2( object):
 
                     w_conv1_27 = weight_variable( "W_conv1_27", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b17_branch2a = tf.nn.conv2d( res4b16_relu, w_conv1_27, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b17_branch2a")
-                    bn4b17_branch2a = tf.contrib.layers.batch_norm(res4b17_branch2a, is_training = is_training)
+                    bn4b17_branch2a = tf.layers.batch_normalization(res4b17_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b17_branch2a = tf.nn.relu( bn4b17_branch2a, name = "bn4b17_branch2a")
 
                     w_conv2_27 = weight_variable( "W_conv2_27", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b17_branch2b = tf.nn.atrous_conv2d( bn4b17_branch2a, w_conv2_27, rate = 2, padding = "SAME", name = "res4b17_branch2b")
-                    bn4b17_branch2b = tf.contrib.layers.batch_norm(res4b17_branch2b, is_training = is_training)
+                    bn4b17_branch2b = tf.layers.batch_normalization(res4b17_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b17_branch2b = tf.nn.relu( bn4b17_branch2b, name = "bn4b17_branch2b")
 
                     w_conv3_27 = weight_variable( "W_conv3_27", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b17_branch2c = tf.nn.conv2d( bn4b17_branch2b, w_conv3_27, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b17_branch2c")
-                    bn4b17_branch2c = tf.contrib.layers.batch_norm(res4b17_branch2c, is_training = is_training)
+                    bn4b17_branch2c = tf.layers.batch_normalization(res4b17_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_27)
                     self._weights.append( w_conv2_27)
@@ -641,17 +641,17 @@ class DeepLabv2( object):
 
                     w_conv1_28 = weight_variable( "W_conv1_28", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b18_branch2a = tf.nn.conv2d( res4b17_relu, w_conv1_28, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b18_branch2a")
-                    bn4b18_branch2a = tf.contrib.layers.batch_norm(res4b18_branch2a, is_training = is_training)
+                    bn4b18_branch2a = tf.layers.batch_normalization(res4b18_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b18_branch2a = tf.nn.relu( bn4b18_branch2a, name = "bn4b18_branch2a")
 
                     w_conv2_28 = weight_variable( "W_conv2_28", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b18_branch2b = tf.nn.atrous_conv2d( bn4b18_branch2a, w_conv2_28, rate = 2, padding = "SAME", name = "res4b18_branch2b")
-                    bn4b18_branch2b = tf.contrib.layers.batch_norm(res4b18_branch2b, is_training = is_training)
+                    bn4b18_branch2b = tf.layers.batch_normalization(res4b18_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b18_branch2b = tf.nn.relu( bn4b18_branch2b, name = "bn4b18_branch2b")
 
                     w_conv3_28 = weight_variable( "W_conv3_28", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b18_branch2c = tf.nn.conv2d( bn4b18_branch2b, w_conv3_28, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b18_branch2c")
-                    bn4b18_branch2c = tf.contrib.layers.batch_norm(res4b18_branch2c, is_training = is_training)
+                    bn4b18_branch2c = tf.layers.batch_normalization(res4b18_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_28)
                     self._weights.append( w_conv2_28)
@@ -663,17 +663,17 @@ class DeepLabv2( object):
 
                     w_conv1_29 = weight_variable( "W_conv1_29", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b19_branch2a = tf.nn.conv2d( res4b18_relu, w_conv1_29, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b19_branch2a")
-                    bn4b19_branch2a = tf.contrib.layers.batch_norm(res4b19_branch2a, is_training = is_training)
+                    bn4b19_branch2a = tf.layers.batch_normalization(res4b19_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b19_branch2a = tf.nn.relu( bn4b19_branch2a, name = "bn4b19_branch2a")
 
                     w_conv2_29 = weight_variable( "W_conv2_29", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b19_branch2b = tf.nn.atrous_conv2d( bn4b19_branch2a, w_conv2_29, rate = 2, padding = "SAME", name = "res4b19_branch2b")
-                    bn4b19_branch2b = tf.contrib.layers.batch_norm(res4b19_branch2b, is_training = is_training)
+                    bn4b19_branch2b = tf.layers.batch_normalization(res4b19_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b19_branch2b = tf.nn.relu( bn4b19_branch2b, name = "bn4b19_branch2b")
 
                     w_conv3_29 = weight_variable( "W_conv3_29", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b19_branch2c = tf.nn.conv2d( bn4b19_branch2b, w_conv3_29, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b19_branch2c")
-                    bn4b19_branch2c = tf.contrib.layers.batch_norm(res4b19_branch2c, is_training = is_training)
+                    bn4b19_branch2c = tf.layers.batch_normalization(res4b19_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_29)
                     self._weights.append( w_conv2_29)
@@ -685,17 +685,17 @@ class DeepLabv2( object):
 
                     w_conv1_30 = weight_variable( "W_conv1_30", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b20_branch2a = tf.nn.conv2d( res4b19_relu, w_conv1_30, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b20_branch2a")
-                    bn4b20_branch2a = tf.contrib.layers.batch_norm(res4b20_branch2a, is_training = is_training)
+                    bn4b20_branch2a = tf.layers.batch_normalization(res4b20_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b20_branch2a = tf.nn.relu( bn4b20_branch2a, name = "bn4b20_branch2a")
 
                     w_conv2_30 = weight_variable( "W_conv2_30", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b20_branch2b = tf.nn.atrous_conv2d( bn4b20_branch2a, w_conv2_30, rate = 2, padding = "SAME", name = "res4b20_branch2b")
-                    bn4b20_branch2b = tf.contrib.layers.batch_norm(res4b20_branch2b, is_training = is_training)
+                    bn4b20_branch2b = tf.layers.batch_normalization(res4b20_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b20_branch2b = tf.nn.relu( bn4b20_branch2b, name = "bn4b20_branch2b")
 
                     w_conv3_30 = weight_variable( "W_conv3_30", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b20_branch2c = tf.nn.conv2d( bn4b20_branch2b, w_conv3_30, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b20_branch2c")
-                    bn4b20_branch2c = tf.contrib.layers.batch_norm(res4b20_branch2c, is_training = is_training)
+                    bn4b20_branch2c = tf.layers.batch_normalization(res4b20_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_30)
                     self._weights.append( w_conv2_30)
@@ -707,17 +707,17 @@ class DeepLabv2( object):
 
                     w_conv1_31 = weight_variable( "W_conv1_31", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b21_branch2a = tf.nn.conv2d( res4b20_relu, w_conv1_31, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b21_branch2a")
-                    bn4b21_branch2a = tf.contrib.layers.batch_norm(res4b21_branch2a, is_training = is_training)
+                    bn4b21_branch2a = tf.layers.batch_normalization(res4b21_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b21_branch2a = tf.nn.relu( bn4b21_branch2a, name = "bn4b21_branch2a")
 
                     w_conv2_31 = weight_variable( "W_conv2_31", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b21_branch2b = tf.nn.atrous_conv2d( bn4b21_branch2a, w_conv2_31, rate = 2, padding = "SAME", name = "res4b21_branch2b")
-                    bn4b21_branch2b = tf.contrib.layers.batch_norm(res4b21_branch2b, is_training = is_training)
+                    bn4b21_branch2b = tf.layers.batch_normalization(res4b21_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b21_branch2b = tf.nn.relu( bn4b21_branch2b, name = "bn4b21_branch2b")
 
                     w_conv3_31 = weight_variable( "W_conv3_31", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b21_branch2c = tf.nn.conv2d( bn4b21_branch2b, w_conv3_31, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b21_branch2c")
-                    bn4b21_branch2c = tf.contrib.layers.batch_norm(res4b21_branch2c, is_training = is_training)
+                    bn4b21_branch2c = tf.layers.batch_normalization(res4b21_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_31)
                     self._weights.append( w_conv2_31)
@@ -729,17 +729,17 @@ class DeepLabv2( object):
 
                     w_conv1_32 = weight_variable( "W_conv1_32", shape = [ 1, 1, 1024, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res4b22_branch2a = tf.nn.conv2d( res4b21_relu, w_conv1_32, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b22_branch2a")
-                    bn4b22_branch2a = tf.contrib.layers.batch_norm(res4b22_branch2a, is_training = is_training)
+                    bn4b22_branch2a = tf.layers.batch_normalization(res4b22_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b22_branch2a = tf.nn.relu( bn4b22_branch2a, name = "bn4b22_branch2a")
 
                     w_conv2_32 = weight_variable( "W_conv2_32", shape = [ 3, 3, 256, 256], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 256)))
                     res4b22_branch2b = tf.nn.atrous_conv2d( bn4b22_branch2a, w_conv2_32, rate = 2, padding = "SAME", name = "res4b22_branch2b")
-                    bn4b22_branch2b = tf.contrib.layers.batch_norm(res4b22_branch2b, is_training = is_training)
+                    bn4b22_branch2b = tf.layers.batch_normalization(res4b22_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn4b22_branch2b = tf.nn.relu( bn4b22_branch2b, name = "bn4b22_branch2b")
 
                     w_conv3_32 = weight_variable( "W_conv3_32", shape = [ 1, 1, 256, 1024], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 256)))
                     res4b22_branch2c = tf.nn.conv2d( bn4b22_branch2b, w_conv3_32, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res4b22_branch2c")
-                    bn4b22_branch2c = tf.contrib.layers.batch_norm(res4b22_branch2c, is_training = is_training)
+                    bn4b22_branch2c = tf.layers.batch_normalization(res4b22_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_32)
                     self._weights.append( w_conv2_32)
@@ -751,24 +751,24 @@ class DeepLabv2( object):
 
                     w_conv1_33 = weight_variable( "W_conv1_33", shape = [ 1, 1, 1024, 2048], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res5a_branch1 = tf.nn.conv2d( res4b22_relu, w_conv1_33, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5a_branch1")
-                    bn5a_branch1 = tf.contrib.layers.batch_norm(res5a_branch1, is_training = is_training)
+                    bn5a_branch1 = tf.layers.batch_normalization(res5a_branch1, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_33)
 
                 with tf.name_scope( "layer_34" ):
                     w_conv1_34 = weight_variable( "W_conv1_34", shape = [ 1, 1, 1024, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 1024)))
                     res5a_branch2a = tf.nn.conv2d( res4b22_relu, w_conv1_34, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5a_branch2a")
-                    bn5a_branch2a = tf.contrib.layers.batch_norm(res5a_branch2a, is_training = is_training)
+                    bn5a_branch2a = tf.layers.batch_normalization(res5a_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn5a_branch2a = tf.nn.relu( bn5a_branch2a, name = "bn5a_branch2a")
 
                     w_conv2_34 = weight_variable( "W_conv2_34", shape = [ 3, 3, 512, 512], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 512)))
                     res5a_branch2b = tf.nn.atrous_conv2d( bn5a_branch2a, w_conv2_34, rate = 4, padding = "SAME", name = "res5a_branch2b")
-                    bn5a_branch2b = tf.contrib.layers.batch_norm(res5a_branch2b, is_training = is_training)
+                    bn5a_branch2b = tf.layers.batch_normalization(res5a_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn5a_branch2b = tf.nn.relu( bn5a_branch2b, name = "bn5a_branch2b")
 
                     w_conv3_34 = weight_variable( "W_conv3_34", shape = [ 1, 1, 512, 2048], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res5a_branch2c = tf.nn.conv2d( bn5a_branch2b, w_conv3_34, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5a_branch2c")
-                    bn5a_branch2c = tf.contrib.layers.batch_norm(res5a_branch2c, is_training = is_training)
+                    bn5a_branch2c = tf.layers.batch_normalization(res5a_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_34)
                     self._weights.append( w_conv2_34)
@@ -780,17 +780,17 @@ class DeepLabv2( object):
 
                     w_conv1_35 = weight_variable( "W_conv1_35", shape = [ 1, 1, 2048, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 2048)))
                     res5b_branch2a = tf.nn.conv2d( res5a_relu, w_conv1_35, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5b_branch2a")
-                    bn5b_branch2a = tf.contrib.layers.batch_norm(res5b_branch2a, is_training = is_training)
+                    bn5b_branch2a = tf.layers.batch_normalization(res5b_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn5b_branch2a = tf.nn.relu( bn5b_branch2a, name = "bn5b_branch2a")
 
                     w_conv2_35 = weight_variable( "W_conv2_35", shape = [ 3, 3, 512, 512], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 512)))
                     res5b_branch2b = tf.nn.atrous_conv2d( bn5b_branch2a, w_conv2_35, rate = 4, padding = "SAME", name = "res5b_branch2b")
-                    bn5b_branch2b = tf.contrib.layers.batch_norm(res5b_branch2b, is_training = is_training)
+                    bn5b_branch2b = tf.layers.batch_normalization(res5b_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn5b_branch2b = tf.nn.relu( bn5b_branch2b, name = "bn5b_branch2b")
 
                     w_conv3_35 = weight_variable( "W_conv3_35", shape = [ 1, 1, 512, 2048], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res5b_branch2c = tf.nn.conv2d( bn5b_branch2b, w_conv3_35, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5b_branch2c")
-                    bn5b_branch2c = tf.contrib.layers.batch_norm(res5b_branch2c, is_training = is_training)
+                    bn5b_branch2c = tf.layers.batch_normalization(res5b_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_35)
                     self._weights.append( w_conv2_35)
@@ -802,17 +802,17 @@ class DeepLabv2( object):
 
                     w_conv1_36 = weight_variable( "W_conv1_36", shape = [ 1, 1, 2048, 512], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 2048)))
                     res5c_branch2a = tf.nn.conv2d( res5b_relu, w_conv1_36, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5c_branch2a")
-                    bn5c_branch2a = tf.contrib.layers.batch_norm(res5c_branch2a, is_training = is_training)
+                    bn5c_branch2a = tf.layers.batch_normalization(res5c_branch2a, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn5c_branch2a = tf.nn.relu( bn5c_branch2a, name = "bn5c_branch2a")
 
                     w_conv2_36 = weight_variable( "W_conv2_36", shape = [ 3, 3, 512, 512], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 512)))
                     res5c_branch2b = tf.nn.atrous_conv2d( bn5c_branch2a, w_conv2_36, rate = 4, padding = "SAME", name = "res5c_branch2b")
-                    bn5c_branch2b = tf.contrib.layers.batch_norm(res5c_branch2b, is_training = is_training)
+                    bn5c_branch2b = tf.layers.batch_normalization(res5c_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn5c_branch2b = tf.nn.relu( bn5c_branch2b, name = "bn5c_branch2b")
 
                     w_conv3_36 = weight_variable( "W_conv3_36", shape = [ 1, 1, 512, 2048], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 512)))
                     res5c_branch2c = tf.nn.conv2d( bn5c_branch2b, w_conv3_36, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res5c_branch2c")
-                    bn5c_branch2c = tf.contrib.layers.batch_norm(res5c_branch2c, is_training = is_training)
+                    bn5c_branch2c = tf.layers.batch_normalization(res5c_branch2c, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
 
                     self._weights.append( w_conv1_36)
                     self._weights.append( w_conv2_36)
