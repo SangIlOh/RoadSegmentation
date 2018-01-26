@@ -81,7 +81,7 @@ class DeepLabv2( object):
 
                     w_conv2_1 = weight_variable( "W_conv2_1", shape = [ 3, 3, 64, 64], stddev = np.math.sqrt( 2.0 / ( 3 * 3 * 64)))
                     res2a_branch2b = tf.nn.conv2d( bn2a_branch2a, w_conv2_1, strides = [ 1, 1, 1, 1], padding = "VALID", name = "res2a_branch2b")
-                    bn2a_branch2b = tf.layers.batch_normalization(res2a_branch2baxis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
+                    bn2a_branch2b = tf.layers.batch_normalization(res2a_branch2b, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
                     bn2a_branch2b = tf.nn.relu( bn2a_branch2b, name = "bn2a_branch2b")
 
                     w_conv3_1 = weight_variable( "W_conv3_1", shape = [ 1, 1, 64, 256], stddev = np.math.sqrt( 2.0 / ( 1 * 1 * 64)))
