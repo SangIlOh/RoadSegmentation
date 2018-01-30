@@ -134,11 +134,11 @@ class DataSet( object):
         return rimg
 
 
-    def next( self, pad_shape0, pad_shape1):
+    def next( self, batch_size = 1):
 
-        batch_size = 1
         start = self._index_in_epoch
-        self._index_in_epoch += 1
+        self._index_in_epoch += batch_size
+
         if self._index_in_epoch > self._num_examples:
             self._epochs_completed += 1
             perm = np.arange( self._num_examples)
@@ -146,90 +146,70 @@ class DataSet( object):
             self._img_list = self._img_list[ perm]
             self._label_list = self._label_list[ perm]
             start = 0
-            self._index_in_epoch = 1
+            self._index_in_epoch = batch_size
         end = self._index_in_epoch
                 
-        x0 = self.img_read( self._dir + self._img_list[ start], -1)
-        label_imgs = []
-        for nc in range( self._num_class_wo_fake):
-            label_imgs.append( self.label_read( self._dir + self._label_list[ start][ nc], 0))
-
-        img_shape = x0.shape[ : 2]
-
-        if len( x0.shape) == 2:
-
-            x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
-            x0.shape = ( 1,) + x0.shape + ( 1,)
-        else:
-
-            x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
-            x0.shape = ( 1,) + x0.shape
-
-        
-        label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
-        for nc in range( self._num_class_wo_fake):
-            label_img = label_imgs[ nc]
-            pixel_coords = np.where( label_img > 128)
-            label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
-        background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
-        label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
-
-        weight0 = np.full( fill_value = np.float32( 1), shape = ( 1,) + img_shape, dtype = np.float32)
-        if self._weight_dir != None:
-            weight_map = cv2.imread( self._weight_dir + self._img_list[ start][ : -4] + ".png", -1)
-            weight_map = self.resize( weight_map, self._resize_shape)
-            weight0[ 0, :, :] = weight_map
-
-        return x0, label0, weight0, None, self._img_list[ start]
-
-
-    def get( self, pad_shape0, pad_shape1, start):
-
-        batch_size = 1
-        end = start + 1
-
-        x0 = self.img_read( self._dir + self._img_list0[ start], -1)
-        label_imgs = []
-        for nc in range( self._num_class_wo_fake):
-            label_imgs.append( self.label_read( self._dir + self._label_list0[ start][ nc], 0))
-
-        img_shape = x0.shape[ : 2]
-
-        if len( x0.shape) == 2:
-            x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
-            x0.shape = ( 1,) + x0.shape + ( 1,)
-        else:
-            x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
-            x0.shape = ( 1,) + x0.shape
-                    
-        label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
-        for nc in range( self._num_class_wo_fake):
-            label_img = label_imgs[ nc]
-            pixel_coords = np.where( label_img > 128)
-            label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
-        background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
-        label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
-
-        weight0 = np.full( fill_value = np.float32( 1), shape = ( 1,) + img_shape, dtype = np.float32)
-        if self._weight_dir != None:
-            weight_map = cv2.imread( self._weight_dir + self._img_list0[ start][ : -4] + ".png", -1)
-            weight_map = self.resize( weight_map, self._resize_shape)
-            weight0[ 0, :, :] = weight_map
-
-        return x0, label0, weight0, None
-
-
-    def get_window_batch( self, pad_shape0, pad_shape1, window_rect, start, batch_size):
-        
-        batch_x = np.ndarray( shape = ( ( batch_size,) + ( window_rect[ 2] + np.sum( pad_shape0), window_rect[ 3] + np.sum( pad_shape1), self._num_channel)), dtype = np.float32)
-        batch_y = np.zeros( shape = ( ( batch_size,) + window_rect[ 2 :] + ( self._num_class,)), dtype = np.float32)
-        batch_weight = np.full( shape = ( ( batch_size,) + window_rect[ 2 :]), fill_value = 1, dtype = np.float32)
+        batch_image = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_channel,)), dtype = np.float32)
         for nb in range( batch_size):
-            x0, label0, weight0, _ = self.get( pad_shape0, pad_shape1, start + nb)
-            batch_x[ nb, :, :, :]  = x0
-            batch_y[ nb, :, :, :] = label0
-            batch_weight[ nb, :, :] = weight0
-        return batch_x, batch_y, batch_weight
+            x0 = self.img_read( self._dir + self._img_list[ start+nb], -1)
+            if len( x0.shape) == 2:
+                x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
+                x0.shape = ( 1,) + x0.shape + ( 1,)
+            else:
+                x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
+                x0.shape = ( 1,) + x0.shape
+            batch_image[nb, ...] = x0
+
+        img_shape = x0.shape[ : 2]
+        
+        batch_labels = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_class,)), dtype = np.float32)
+        for nb in range(batch_size):
+            label_imgs = []
+            label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
+            for nc in range( self._num_class_wo_fake):
+                label_imgs.append( self.label_read( self._dir + self._label_list[ start +nb][ nc], 0))
+                label_img = label_imgs[ nc]
+                pixel_coords = np.where( label_img > 128)
+                label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
+
+            background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
+            label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+            batch_labels[nb, ...] = label0
+
+
+        return batch_image, batch_labels, self._img_list[ start + batch_size]
+
+
+    def get( self, start, batch_size = 1):
+
+        end = start + batch_size
+
+        batch_image = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_channel,)), dtype = np.float32)
+        for nb in range( batch_size):
+            x0 = self.img_read( self._dir + self._img_list[ start+nb], -1)
+            if len( x0.shape) == 2:
+                x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
+                x0.shape = ( 1,) + x0.shape + ( 1,)
+            else:
+                x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
+                x0.shape = ( 1,) + x0.shape
+            batch_image[nb, ...] = x0
+
+        batch_labels = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_class,)), dtype = np.float32)
+        for nb in range(batch_size):
+            label_imgs = []
+            label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
+            for nc in range( self._num_class_wo_fake):
+                label_imgs.append( self.label_read( self._dir + self._label_list[ start +nb][ nc], 0))
+                label_img = label_imgs[ nc]
+                pixel_coords = np.where( label_img > 128)
+                label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
+
+            background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
+            label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+            batch_labels[nb, ...] = label0
+
+        return batch_image, batch_labels
 
 
 
@@ -238,8 +218,6 @@ class DataSet( object):
         batch_size = batch_y.shape[ 0]
         height = batch_y.shape[ 1]
         width = batch_y.shape[ 2]
-        pad0 = ( batch_x.shape[ 1] - batch_y.shape[ 1]) // 2
-        pad1 = ( batch_x.shape[ 2] - batch_y.shape[ 2]) // 2
 
         np_colors = np.array(self._class_colors)
         img_gt = np.uint8(np.argmax(batch_y, axis = 3))
