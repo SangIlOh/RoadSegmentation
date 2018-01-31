@@ -165,25 +165,25 @@ def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel
 
             shape_up_arr = [x_shape[ 0], x_shape[ 1] * 2, x_shape[ 2] * 2, x_shape[ 3] // 2]
             r_dw_h_convs = tf.image.resize_bilinear(dw_h_convs[ nl], [shape_up_arr[1], shape_up_arr[2]], name = "r_dw_h_convs")
-            h_deconv_concat = tf.concat([r_dw_h_convs, h_deconv], 3)
+            h_deconv_concat = tf.nn.relu(tf.concat([r_dw_h_convs, h_deconv], 3))
 
             w_const = tf.Variable(tf.constant( 1, shape = [1, 1, num_feature, num_feature // 2], dtype = tf.float32), trainable = False)
             h_deconv_concat = conv2d( h_deconv_concat, w_const, name = "h_deconv_concat")
 
-            bn_deconv_concat = tf.layers.batch_normalization(h_deconv_concat, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
-            h_conv1 = tf.nn.dropout( bn_deconv_concat, keep_prob = keep_prob)
-                    
-            up_h_convs.append( h_conv1)
+            if layer_scope_id is not 8:
+                bn_deconv_concat = tf.layers.batch_normalization(h_deconv_concat, axis=3, epsilon=1e-5, momentum=0.1, training=is_training, gamma_initializer=tf.random_normal_initializer(1.0, 0.02))
+                h_conv1 = tf.nn.dropout( bn_deconv_concat, keep_prob = keep_prob)
+                up_h_convs.append( h_conv1)
+            else: # last layer
+                h_conv1 = tf.nn.relu(h_deconv_concat)
+
+                wo = tf.Variable(tf.constant( 1, shape = [1, 1, num_feature_root, num_class], dtype = tf.float32), trainable = False)
+                h_conv1 = conv2d( h_conv1, wo, name = "h_conv1")
+
+                output_map = tf.tanh(h_conv1)
+                output_map = tf.image.resize_bilinear(output_map, [output_HW[0], output_HW[1]], name = "output_map")
+            
             layer_scope_id += 1
-
-    with tf.variable_scope( "%d_output" % layer_scope_id):
-        stddev = np.sqrt( 2 / num_feature_root)
-        wo = weight_variable( "W_conv_output", shape = [ 1, 1, num_feature_root, num_class], stddev = stddev)
-
-        h_input = tf.nn.relu(up_h_convs[ -1])
-        conv_output = conv2d(h_input, wo, name = "conv")
-        output_map = tf.tanh(conv_output)
-        output_map = tf.image.resize_bilinear(output_map, [output_HW[0], output_HW[1]], name = "output_map")
 
     return output_map, weights, biases
 
@@ -221,20 +221,8 @@ def build_discriminator(inputs, targets, weights, is_training = False):
         conv1 = conv2d(input_conv, w1, stride = 1, name = "conv1")
         output = tf.sigmoid(conv1)
         weights.append(w1)
-        convs.append(conv1)
+        convs.append(output)
 
-    """with tf.name_scope("layer_disc_6"):
-        conv1_height = output.get_shape()[1].value
-        conv1_width = output.get_shape()[1].value
-
-        w_fc1 = weight_variable("W_fc1", shape = [conv1_height * conv1_width * 1, 1], stddev = np.math.sqrt(2.0/(conv1_height * conv1_width * 1)))
-
-        conv1_flat = tf.reshape(output, [-1, conv1_height * conv1_width * 1])
-        fc1 = tf.matmul(conv1_flat, w_fc1, name = "fc1")
-        h_fc1 = tf.nn.relu(fc1, name = "h_fc1")
-
-        weights.append(w_fc1)
-        convs.append(h_fc1)"""
 
     return convs[-1], weights
 
@@ -242,7 +230,6 @@ class build_refine_model(object):
     _model_name = "refine_GAN"
     def __init__(self, num_channel, num_class, output_HW, learning_rate = 0.0002, momentum = 0.5, gan_weight = 1.0, l1_weight = 100.0): # inputs: segmentation result from the first network, targets: final segmentation result
 
-        #with tf.name_scope("refine_GAN" ):
         self._output_HW = output_HW
         self._input_HW = output_HW
         self._num_channel = num_channel
@@ -263,13 +250,6 @@ class build_refine_model(object):
         with tf.name_scope( "input"):
             self._x = tf.placeholder( dtype = tf.float32, shape = [ None, self._input_HW[0], self._input_HW[ 1], self._num_channel], name = "x")
             self._y = tf.placeholder( dtype = tf.float32, shape = [ None, output_HW[ 0], output_HW[ 1], self._num_class], name = "y")
-            
-
-        """with tf.name_scope( "input"):
-            self._x = tf.placeholder( dtype = tf.float32, shape = [ None, self._input_HW[0], self._input_HW[ 1], self._num_channel], name = "x")
-            self._inputs = tf.placeholder( dtype = tf.float32, shape = [ None, self._output_HW[ 0], self._output_HW[ 1], self._num_class], name = "inputs")
-            self._targets = tf.placeholder( dtype = tf.float32, shape = [ None, self._output_HW[ 0], self._output_HW[ 1], self._num_class], name = "targets")
-            self._keep_prob = tf.placeholder( dtype = tf.float32, name = "keep_prob")"""
 
         # graph for cGAN
         with tf.name_scope( "graph_refiner"):
@@ -1209,41 +1189,7 @@ class build_refine_model(object):
         shutil.rmtree( verification_path, ignore_errors = True)
         time.sleep( 0.100)
         os.makedirs( verification_path, exist_ok = True)
-        """
-        # loss for discriminator
-        self.disc_loss = tf.reduce_mean(-(tf.log(self._disc_pred_4real + (1e-12)) + tf.log(1 - self._disc_pred_4fake + (1e-12))))
-
-        # loss for generator
-        self.gen_loss_root = tf.reduce_mean(-tf.log(self._disc_pred_4fake + (1e-12)))
-        self.gen_loss_L1 = tf.reduce_mean(tf.abs(self._targets - self._gen_out))
-        self.gen_loss = (self.gen_loss_root * gan_weight) + (self.gen_loss_L1 * l1_weight)
-
         
-        # optimizer for discriminator
-        disc_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
-        disc_optimizer = tf.train.AdamOptimizer(learning_rate, momentum)
-        disc_grads_and_vars = disc_optimizer.compute_gradients(self.disc_loss, var_list=disc_tvars)
-        disc_train = disc_optimizer.apply_gradients(disc_grads_and_vars)
-
-        # optimizer for generator
-        with tf.control_dependencies([disc_train]):
-            gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
-            gen_optimizer = tf.train.AdamOptimizer(learning_rate, momentum)
-            gen_grads_and_vars = gen_optimizer.compute_gradients(self.gen_loss, var_list=gen_tvars)
-            gen_train = gen_optimizer.apply_gradients(gen_grads_and_vars)
-
-        EMA = tf.train.ExponentialMovingAverage(decay = 0.99)
-        update_losses = EMA.apply([self.disc_loss, self.gen_loss_root, self.gen_loss_L1])
-
-        global_step = tf.train.get_or_create_global_step()
-        incr_global_step = tf.assign(global_step, global_step+1)
-
-        self.disc_loss = EMA.average(self.disc_loss)
-        self.gen_loss_root = EMA.average(self.gen_loss_root)
-        self.gen_loss_L1=EMA.average(self.gen_loss_L1)
-
-        self.train_group = tf.group(update_losses, incr_global_step, gen_train)
-        """
         tf.summary.scalar("disc_loss", self.disc_loss)
         tf.summary.scalar("gen_loss_root", self.gen_loss_root)
         tf.summary.scalar("gen_loss_L1", self.gen_loss_L1)
