@@ -20,7 +20,8 @@ class DataSet( object):
                  img_list,
                  label_list,
                  resize_shape,
-                 normalize_val):
+                 normalize_val,
+                 is_colormask = None):
         
         self._num_channel = num_channel
         self._num_class = num_class
@@ -36,7 +37,7 @@ class DataSet( object):
         self._label_list = np.array( label_list)
         self._resize_shape = resize_shape
         self._normalize_val = normalize_val
-                
+        self._is_colormask = is_colormask
         self._index_in_epoch = 0
         self._epochs_completed = 0
         self._num_examples = len( self._img_list)
@@ -133,6 +134,32 @@ class DataSet( object):
         rimg = self.resize( img, self._resize_shape)
         return rimg
 
+    def label_read_from_colormask(self, path, read_param = 0):
+        img = cv2.imread( path, read_param)
+        rimg = self.resize( img, self._resize_shape)
+
+        label_imgs = []
+        label0 = np.zeros( shape = ( 1,) + (rimg.shape[0], rimg.shape[1]) + ( self._num_class,), dtype = np.float32)
+
+        for nc in range(self._num_class):
+            mask_tmp = np.zeros((rimg.shape[0], rimg.shape[1]), np.uint8)
+            logicb = np.uint8(rimg[:,:,0] == self._class_colors[nc][0])
+            logicg = np.uint8(rimg[:,:,1] == self._class_colors[nc][1])
+            logicr = np.uint8(rimg[:,:,2] == self._class_colors[nc][2])
+            logic_cls = np.uint8(logicr+logicg+logicb)
+            mask_tmp[logic_cls == 3] = 255
+
+            label_imgs.append(mask_tmp)
+
+            label_img = label_imgs[ nc]
+            pixel_coords = np.where( label_img > 128)
+            label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
+
+        background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
+        label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+        
+        return label0
+
 
     def next( self, batch_size = 1):
 
@@ -152,6 +179,8 @@ class DataSet( object):
         batch_image = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_channel,)), dtype = np.float32)
         for nb in range( batch_size):
             x0 = self.img_read( self._dir + self._img_list[ start+nb], -1)
+            img_shape = x0.shape[ : 2]
+
             if len( x0.shape) == 2:
                 x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
                 x0.shape = ( 1,) + x0.shape + ( 1,)
@@ -160,22 +189,26 @@ class DataSet( object):
                 x0.shape = ( 1,) + x0.shape
             batch_image[nb, ...] = x0
 
-        img_shape = x0.shape[ : 2]
+        
         
         batch_labels = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_class,)), dtype = np.float32)
         for nb in range(batch_size):
-            label_imgs = []
-            label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
-            for nc in range( self._num_class_wo_fake):
-                label_imgs.append( self.label_read( self._dir + self._label_list[ start +nb][ nc], 0))
-                label_img = label_imgs[ nc]
-                pixel_coords = np.where( label_img > 128)
-                label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
+            if self._is_colormask is None:
+                label_imgs = []
+                label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
+            
+                for nc in range( self._num_class_wo_fake):
+                    label_imgs.append( self.label_read( self._dir + self._label_list[ start +nb][ nc], 0))
+                    label_img = label_imgs[ nc]
+                    pixel_coords = np.where( label_img > 128)
+                    label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
 
-            background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
-            label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+                background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
+                label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+            else:
+                label0 = self.label_read_from_colormask( self._dir + self._label_list[ start +nb], 0)
+
             batch_labels[nb, ...] = label0
-
 
         return batch_image, batch_labels, self._img_list[ start + batch_size]
 
@@ -187,6 +220,7 @@ class DataSet( object):
         batch_image = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_channel,)), dtype = np.float32)
         for nb in range( batch_size):
             x0 = self.img_read( self._dir + self._img_list[ start+nb], -1)
+            img_shape = x0.shape[ : 2]
             if len( x0.shape) == 2:
                 x0 = x0.astype( np.float32) / np.float32( self._normalize_val)
                 x0.shape = ( 1,) + x0.shape + ( 1,)
@@ -195,18 +229,23 @@ class DataSet( object):
                 x0.shape = ( 1,) + x0.shape
             batch_image[nb, ...] = x0
 
+
         batch_labels = np.ndarray( shape = ( ( batch_size,) + self._resize_shape + ( self._num_class,)), dtype = np.float32)
         for nb in range(batch_size):
-            label_imgs = []
-            label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
-            for nc in range( self._num_class_wo_fake):
-                label_imgs.append( self.label_read( self._dir + self._label_list[ start +nb][ nc], 0))
-                label_img = label_imgs[ nc]
-                pixel_coords = np.where( label_img > 128)
-                label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
+            if self._is_colormask is None:
+                label_imgs = []
+                label0 = np.zeros( shape = ( 1,) + img_shape + ( self._num_class,), dtype = np.float32)
+                for nc in range( self._num_class_wo_fake):
+                    label_imgs.append( self.label_read( self._dir + self._label_list[ start +nb][ nc], 0))
+                    label_img = label_imgs[ nc]
+                    pixel_coords = np.where( label_img > 128)
+                    label0[ 0, pixel_coords[ 0], pixel_coords[ 1], nc] = 1
 
-            background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
-            label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+                background_pixel_coords = np.where( np.sum( label0, axis = 3) == 0)
+                label0[ background_pixel_coords[ 0], background_pixel_coords[ 1], background_pixel_coords[ 2], -1] = 1
+            else:
+                label0 = self.label_read_from_colormask( self._dir + self._label_list[ start +nb], 0)
+
             batch_labels[nb, ...] = label0
 
         return batch_image, batch_labels
@@ -262,6 +301,7 @@ class DataSetReader( object):
                  class_names,
                  class_colors,
                  dir,
+                 is_colormask = None,
                  weight_dir = None,
                  resize_shape = ( -1, -1),
                  normalize_val = 255):
@@ -271,6 +311,7 @@ class DataSetReader( object):
         self._class_names = class_names
         self._class_colors = class_colors
         self._dir = dir
+        self._is_colormask = is_colormask
         self._weight_dir = weight_dir
         self._resize_shape = resize_shape
         self._normalize_val = normalize_val
@@ -285,7 +326,10 @@ class DataSetReader( object):
             self._weight_dir += '/'
         
         img_list = flist
-        label_list = [ [ os.path.splitext( img_path)[ 0] + "_" + str( nc + 1) + os.path.splitext( img_path)[ 1] for nc in range( self._num_class_wo_fake)] for img_path in img_list]
+        if self._is_colormask is None:
+            label_list = [ [ os.path.splitext( img_path)[ 0] + "_" + str( nc + 1) + os.path.splitext( img_path)[ 1] for nc in range( self._num_class_wo_fake)] for img_path in img_list]
+        else:
+            label_list = [os.path.splitext( img_path)[ 0] + "_m" + os.path.splitext( img_path)[ 1] for img_path in img_list]
 
         return DataSet( self._num_channel,
                        self._num_class,
@@ -297,4 +341,5 @@ class DataSetReader( object):
                        img_list,
                        label_list,
                        self._resize_shape,
-                       self._normalize_val)
+                       self._normalize_val,
+                       self._is_colormask)
