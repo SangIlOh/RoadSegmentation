@@ -1083,21 +1083,10 @@ class DeepLabv2( object):
     def get_response( self, img, model_path, tensor_name = None, iter = -1):
         
         with tf.Session() as sess:
-            
             sess.run( tf.global_variables_initializer())
             self.restore( sess, model_path, iter)
-            if tensor_name is not None:
-                if len(tensor_name) > 1:
-                    response = []
-                    for ii in range(len(tensor_name)):
-                        output = tf.get_default_graph().get_tensor_by_name( tensor_name[ii])
-                        response_tmp = sess.run( output, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
-                        response.append(response_tmp)
-                else:
-                    output = tf.get_default_graph().get_tensor_by_name( tensor_name)
-                    response = sess.run( output, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
-            else:
-                response = sess.run( self._predictor, feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
+
+            response = sess.run( [self._predictor], feed_dict = { self._x: img, self._keep_prob : np.float32( 1)})
             
             return response
 

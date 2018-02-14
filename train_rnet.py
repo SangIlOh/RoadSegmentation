@@ -9,7 +9,7 @@ import time
 import sys
 lib_path = os.path.abspath( os.path.join( "..", "lib"))
 sys.path.append( lib_path)
-from MediVisionUnet import model_DeepLab2_bau
+from MediVisionUnet import model_DeepLab2_bau2
 from MediVisionUtil.dataset_rnet import DataSetReader
 
 class channelization( object):
@@ -75,7 +75,7 @@ class func_save_conditonal_model( object):
 
 if __name__ == "__main__":
     
-    with open( "Bitewing_mt_2_flist/DS1_flist/train_patchlist.txt", "rt") as f:
+    with open( "Bitewing_mt_2_flist/DS1_flist/dltrain_patchlist.txt", "rt") as f:
         ls = f.readlines()
         ls = [ l.strip() for l in ls]
         train_flist = ls
@@ -95,12 +95,8 @@ if __name__ == "__main__":
                                 num_class_wo_fake,
                                 class_names,
                                 class_colors,
-                                dir = "../dataset/mt_3/DS1/train_patch/",
-                                shuffle_data = False,
+                                dir = "../dataset/refinegan/train_patch/",
                                 resize_shape = ( 480,480),
-                                border_type = "constant",
-                                border_value = 0,
-                                channelization = None,
                                 normalize_val = 255).read_data_sets_from_flist( train_flist)
 
     test_data = DataSetReader( num_channel,
@@ -108,32 +104,27 @@ if __name__ == "__main__":
                                 num_class_wo_fake,
                                 class_names,
                                 class_colors,
-                                dir = "../dataset/mt_3/DS1/val_patch/",
-                                shuffle_data = False,
+                                dir = "../dataset/refinegan/val_patch/",
                                 resize_shape = ( 480,480),
-                                border_type = "constant",
-                                border_value = 0,
-                                channelization = None,
                                 normalize_val = 255).read_data_sets_from_flist( test_flist)
 
     
-    refinenet = model_DeepLab2_bau.DeepLabv2( num_channel = num_channel,
+    refinenet = model_DeepLab2_bau2.DeepLabv2( num_channel = num_channel,
                  num_class = num_class, 
-                 output_HW = ( 480,480),
-                 is_training= True)
+                 output_HW = ( 480,480))
     
     refinenet.train( train_data,
-                "../models/deeplab/deeplab_0/temp_bau/",
-                training_iters = 2000,
+                "../models/deeplab/deeplab_0/temp_bau3/",
+                training_iters = 1500,
                 epochs = 300,
                 display_step = 500,
                 keep_prob = 1.0,
-                opt_kwargs = { "cost": "dice_coefficient",
+                opt_kwargs = {
                               "optimizer": "adam",
                               "learning_rate": 1e-3,
                               "use_weight_map": False,
-                              "batch_size": 3,
+                              "batch_size": 2,
                               "pre_trained_model_iteration": None,
                               "test_data": test_data,
-                              "save_model_epochs": [ 0, 149],
+                              "save_model_epochs": [ 0, 149, 299],
                               "func_save_conditonal_model": func_save_conditonal_model()})
