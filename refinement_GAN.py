@@ -43,8 +43,12 @@ def lrelu(x, a):
         return (0.5 * (1 + a)) * x + (0.5 * (1 - a)) * tf.abs(x)
 
 def conv2d( x, W, stride = 1, name = None):
-    conv_2d = tf.nn.conv2d( x, W, strides = [ 1, stride, stride, 1], padding = "VALID", name = name)
-    return conv_2d
+
+    return tf.nn.conv2d( x, W, strides = [ 1, stride, stride, 1], padding = "VALID", name = name)
+
+def seperable_conv2d(x, depth_filter, point_filter, name = None):
+
+    return tf.nn.separable_conv2d(x, depthwise_filter = depth_filter, pointwise_filter = point_filter, strides = [ 1, 2, 2, 1], padding = "SAME", name = name)
 
 def max_pool( x, n):
     return tf.nn.max_pool( x, ksize = [ 1, n, n, 1], strides = [ 1, n, n, 1], padding = "VALID")
@@ -60,6 +64,12 @@ def deconv2d( x, W, stride):
     x_shape = tf.shape( x)
     output_shape = tf.stack( [ x_shape[ 0], x_shape[ 1] * 2, x_shape[ 2] * 2, x_shape[ 3] // 2])
     return tf.nn.conv2d_transpose( x, W, output_shape, strides = [ 1, stride, stride, 1], padding = "SAME")
+
+def seperable_deconv2d(x, depth_filter, point_filter, name = None):
+    h = x.get_shape()[1].value
+    w = x.get_shape()[2].value
+    rx = tf.image.resize_images(x, [h*2, w*2], method = tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    return tf.nn.separable_conv2d(rx, depthwise_filter = depth_filter, pointwise_filter = point_filter, strides = [ 1, 1, 1, 1], padding = "SAME", name = name)
 
 def conv2d_with_dropout( x, W, keep_prob, name = None):
     conv_2d = tf.nn.conv2d( x, W, strides = [ 1, 1, 1, 1], padding = "VALID")
@@ -89,6 +99,96 @@ def bias_variable( name, shape, value = 0.1):
     return tf.Variable( initial, name = name)
 
 def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel, output_HW):
+    ## unet params
+    num_layer = 7
+    num_feature_root = 64
+    num_class = num_channel
+    input_HW = output_HW
+
+    filter_size = 4
+    depth_multiplier = 1
+    layers = []
+
+    ###### ENCODER #####
+    with tf.variable_scope("0_down"):
+        feat_n = num_feature_root
+        depth_filter = weight_variable( "Wd_conv1", shape = [ filter_size, filter_size, num_channel, depth_multiplier], stddev = np.math.sqrt( 2.0 / ( ( filter_size ** 2) * num_channel)))
+        point_filter = weight_variable( "Wp_conv1", shape = [ 1, 1, depth_multiplier*num_channel, feat_n], stddev = np.math.sqrt( 2.0 / ( depth_multiplier*num_channel)))
+        conv1 = seperable_conv2d(inputs, depth_filter, point_filter)
+
+        layers.append(conv1)
+        weights.append(depth_filter)
+        weights.append(point_filter)
+
+    efn_list = [num_feature_root*2, num_feature_root*4, num_feature_root*8]# feature number list of encoder
+    for nl in range(num_layer):
+        with tf.variable_scope( "%d_down" % (nl + 1)):
+            if nl < 3:
+                depth_filter = weight_variable( "Wd_conv1", shape = [ filter_size, filter_size, feat_n, depth_multiplier], stddev = np.math.sqrt( 2.0 / ( ( filter_size ** 2) * feat_n)))
+                point_filter = weight_variable( "Wp_conv1", shape = [ 1, 1, depth_multiplier*feat_n, efn_list[nl]], stddev = np.math.sqrt( 2.0 / ( depth_multiplier*feat_n)))
+                feat_n = efn_list[nl]
+            else:
+                depth_filter = weight_variable( "Wd_conv1", shape = [ filter_size, filter_size, feat_n, depth_multiplier], stddev = np.math.sqrt( 2.0 / ( ( filter_size ** 2) * feat_n)))
+                point_filter = weight_variable( "Wp_conv1", shape = [ 1, 1, depth_multiplier*feat_n, efn_list[-1]], stddev = np.math.sqrt( 2.0 / ( depth_multiplier*feat_n)))
+                feat_n = efn_list[-1]
+        
+            h_conv1 = lrelu(layers[-1], 0.2)
+            conv1 = seperable_conv2d(h_conv1, depth_filter, point_filter, name = "conv1")
+            bn_conv1 = tf.layers.batch_normalization(conv1, training=is_training, name = "bn_conv1")
+
+            layers.append(bn_conv1)
+            weights.append(depth_filter)
+            weights.append(point_filter)
+
+    ###### DECODER #####
+    dfn_list = [num_feature_root*8*2, num_feature_root*4*2, num_feature_root*2*2, num_feature_root*2]# feature number list of decoder
+    num_encoder = len(layers)
+    for nl in range(num_layer):
+        skip_idx = num_encoder - nl - 1
+        with tf.variable_scope( "%d_up" % (nl + 1)):
+            if nl == 0:
+                decoder_input = tf.nn.relu(layers[-1])
+            else:
+                htmp = layers[-1].get_shape()[1].value
+                wtmp = layers[-1].get_shape()[2].value
+                skip_out = tf.image.resize_images(layers[skip_idx], [htmp, wtmp], method = tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                decoder_input = tf.nn.relu(tf.concat([layers[-1], skip_out], axis = 3))
+
+            input_channel = decoder_input.get_shape()[3].value
+            if nl < 4:
+                depth_filter = weight_variable( "Wd_deconv1", shape = [ filter_size, filter_size, input_channel, depth_multiplier], stddev = np.math.sqrt( 2.0 / ( ( filter_size ** 2) * input_channel)))
+                point_filter = weight_variable( "Wp_deconv1", shape = [ 1, 1, depth_multiplier*input_channel, dfn_list[nl]], stddev = np.math.sqrt( 2.0 / ( depth_multiplier*input_channel)))
+            else:
+                depth_filter = weight_variable( "Wd_deconv1", shape = [ filter_size, filter_size, input_channel, depth_multiplier], stddev = np.math.sqrt( 2.0 / ( ( filter_size ** 2) * input_channel)))
+                point_filter = weight_variable( "Wp_deconv1", shape = [ 1, 1, depth_multiplier*input_channel, dfn_list[-1]], stddev = np.math.sqrt( 2.0 / ( depth_multiplier*input_channel)))
+
+            deconv1 = seperable_deconv2d(decoder_input, depth_filter, point_filter, name = "deconv1")
+            bn_deconv1 = tf.layers.batch_normalization(deconv1, training=is_training, name = "bn_deconv1")
+            if nl < 3:
+                bn_deconv1 = tf.nn.dropout(bn_deconv1, keep_prob = 0.5)
+
+            layers.append(bn_deconv1)
+            weights.append(depth_filter)
+            weights.append(point_filter)
+    
+    with tf.variable_scope("last_up"):
+        htmp = layers[-1].get_shape()[1].value
+        wtmp = layers[-1].get_shape()[2].value
+        skip_out = tf.image.resize_images(layers[0], [htmp, wtmp], method = tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        decoder_input = tf.nn.relu(tf.concat([layers[-1], skip_out], axis = 3))
+
+        input_channel = decoder_input.get_shape()[3].value
+        depth_filter = weight_variable( "Wd_deconv1", shape = [ filter_size, filter_size, input_channel, depth_multiplier], stddev = np.math.sqrt( 2.0 / ( ( filter_size ** 2) * input_channel)))
+        point_filter = weight_variable( "Wp_deconv1", shape = [ 1, 1, depth_multiplier*input_channel, num_class], stddev = np.math.sqrt( 2.0 / ( depth_multiplier*input_channel)))
+        output_map = seperable_deconv2d(decoder_input, depth_filter, point_filter, name = "deconv1")
+        output_map = tf.image.resize_bilinear(tf.tanh(output_map), [output_HW[0], output_HW[1]], name = "output_map")
+
+        layers.append(output_map)
+        weights.append(depth_filter)
+        weights.append(point_filter)
+
+    return output_map, weights, biases
+"""def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel, output_HW):
     ## unet params
     num_layer = 5
     num_feature_root = 64
@@ -198,7 +298,8 @@ def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel
         output_map = tf.nn.relu( conv_output)
         output_map = tf.image.resize_bilinear(output_map, [output_HW[0], output_HW[1]], name = "output_map")
 
-    return output_map, weights, biases
+    return output_map, weights, biases"""
+
 
 def build_discriminator(inputs, targets, weights, is_training):
     num_layer = 4
@@ -235,20 +336,18 @@ def build_discriminator(inputs, targets, weights, is_training):
         output = tf.sigmoid(conv1)
         weights.append(w1)
         convs.append(output)
+        
 
-
-    return convs[-1], weights
+    return convs[-1], conv1, weights
 
 class build_refine_model(object):
     _model_name = "refine_GAN"
-    def __init__(self, num_channel, num_class, output_HW, learning_rate = 0.0002, momentum = 0.5, gan_weight = 1.0, l1_weight = 100.0): # inputs: segmentation result from the first network, targets: final segmentation result
+    def __init__(self, num_channel, num_class, output_HW): # inputs: segmentation result from the first network, targets: final segmentation result
 
         self._output_HW = output_HW
         self._input_HW = output_HW
         self._num_channel = num_channel
         self._num_class = num_class
-        self._lr = learning_rate
-        self._momentum = momentum
         self._weights_gan = []
         self._biases_gan = []
         # graph for DeepLab
@@ -1125,57 +1224,22 @@ class build_refine_model(object):
         #self._inputs = tf.identity(self._predictor)
         with tf.variable_scope("generator"):
             self._gen_out, self._weights_gan, self._biases_gan = build_generator(self._inputs, self._is_train, self._weights_gan, self._biases_gan, self._keep_probs, self._num_class, self._output_HW)
-            self._gen_out = self.pixel_wise_softmax_2( self._gen_out)
+            #self._gen_out = self.pixel_wise_softmax_2( self._gen_out)
 
         with tf.name_scope("real_discriminator"):
             with tf.variable_scope("discriminator"):
-                self._disc_pred_4real, self._weights_gan = build_discriminator(self._inputs, self._targets, self._weights_gan, self._is_train)
+                self._disc_pred_4real, self._disc_logit_4real, self._weights_gan = build_discriminator(self._inputs, self._targets, self._weights_gan, self._is_train)
 
         with tf.name_scope("fake_discriminator"):
             with tf.variable_scope("discriminator", reuse = True):
-                self._disc_pred_4fake, self._weights_gan = build_discriminator(self._inputs, self._gen_out, self._weights_gan, self._is_train)
-
-        with tf.name_scope("discriminator_loss"):
-            # minimizing -tf.log will try to get inputs to 1
-            # predict_real => 1
-            # predict_fake => 0
-            self.disc_loss = tf.reduce_mean(-(tf.log(self._disc_pred_4real + (1e-12)) + tf.log(1 - self._disc_pred_4fake + (1e-12))))
-        with tf.name_scope("generator_loss"):
-            self.gen_loss_root = tf.reduce_mean(-tf.log(self._disc_pred_4fake + (1e-12)))
-            self.gen_loss_L1 = tf.reduce_mean(tf.abs(self._targets - self._gen_out))
-            self.gen_loss = (self.gen_loss_root * gan_weight) + (self.gen_loss_L1 * l1_weight)
-
-        with tf.name_scope("discriminator_train"):
-            self.disc_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
-            self.disc_optimizer = tf.train.AdamOptimizer(self._lr, self._momentum)
-            self.disc_grads_and_vars = self.disc_optimizer.compute_gradients(self.disc_loss, var_list=self.disc_tvars)
-            self.disc_train = self.disc_optimizer.apply_gradients(self.disc_grads_and_vars)
-        with tf.name_scope("generator_train"):
-            with tf.control_dependencies([self.disc_train]):
-                self.gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
-                self.gen_optimizer = tf.train.AdamOptimizer(self._lr, self._momentum)
-                self.gen_grads_and_vars = self.gen_optimizer.compute_gradients(self.gen_loss, var_list=self.gen_tvars)
-                self.gen_train = self.gen_optimizer.apply_gradients(self.gen_grads_and_vars)
-
-
-        EMA = tf.train.ExponentialMovingAverage(decay=0.99)
-        update_losses = EMA.apply([self.disc_loss, self.gen_loss_root, self.gen_loss_L1])
-
-        global_step = tf.train.get_or_create_global_step()
-        incr_global_step = tf.assign(global_step, global_step+1)
-
-        self.disc_loss = EMA.average(self.disc_loss)
-        self.gen_loss_root = EMA.average(self.gen_loss_root)
-        self.gen_loss_L1=EMA.average(self.gen_loss_L1)
-
-        self.train_group = tf.group(update_losses, incr_global_step, self.gen_train)
-        self._saver = tf.train.Saver(max_to_keep = None)
+                self._disc_pred_4fake, self._disc_logit_4fake, self._weights_gan = build_discriminator(self._inputs, self._gen_out, self._weights_gan, self._is_train)
         
+        self._saver = tf.train.Saver(max_to_keep = None)
 
     def pixel_wise_softmax_2( self, output_map):
-        tensor_max = tf.tile( tf.reduce_max( output_map, 3, keep_dims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
+        tensor_max = tf.tile( tf.reduce_max( output_map, 3, keepdims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
         exponential_map = tf.exp( output_map - tensor_max)
-        tensor_sum_exp = tf.tile( tf.reduce_sum( exponential_map, 3, keep_dims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
+        tensor_sum_exp = tf.tile( tf.reduce_sum( exponential_map, 3, keepdims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
 
         return tf.div( exponential_map, tensor_sum_exp, name = "predictor")
 
@@ -1257,12 +1321,61 @@ class build_refine_model(object):
         time.sleep( 0.100)
         os.makedirs( verification_path, exist_ok = True)
 
+        with tf.name_scope("discriminator_loss"):
+            # minimizing -tf.log will try to get inputs to 1
+            # predict_real => 1
+            # predict_fake => 0
+            #disc_loss = tf.reduce_mean(-(tf.log(self._disc_pred_4real + (1e-12)) + tf.log(1 - self._disc_pred_4fake + (1e-12))))##
+            #disc_loss = tf.reduce_mean(-(tf.log(self._disc_pred_4real) + tf.log(1 - self._disc_pred_4fake)))##
+            disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = self._disc_logit_4real, labels = tf.ones_like(self._disc_pred_4real)))
+            disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = self._disc_logit_4fake, labels = tf.zeros_like(self._disc_pred_4fake)))
+            self._disc_loss = disc_loss_real + disc_loss_fake
+        with tf.name_scope("generator_loss"):
+            #gen_loss_root = tf.reduce_mean(-tf.log(self._disc_pred_4fake + (1e-12)))##
+            #gen_loss_root = tf.reduce_mean(-tf.log(self._disc_pred_4fake))
+            gen_loss_root = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = self._disc_logit_4fake, labels = tf.ones_like(self._disc_pred_4fake)))
+            gen_loss_L1 = tf.reduce_mean(tf.abs(self._targets - self._gen_out))
+            self._gen_loss = (gen_loss_root * gan_weight) + (gen_loss_L1 * l1_weight)
 
+        #global_step = tf.train.get_or_create_global_step()
+        global_step = tf.Variable( 0, name = "global_step", trainable = False)
+        incr_global_step = tf.assign(global_step, global_step+1)
+
+        with tf.name_scope("discriminator_train"):
+            disc_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
+            disc_optimizer = tf.train.AdamOptimizer(learning_rate, momentum)
+            self._disc_train = disc_optimizer.minimize(self._disc_loss, var_list = disc_tvars)##
+            #disc_grads_and_vars = disc_optimizer.compute_gradients(disc_loss, var_list=disc_tvars)##
+            #disc_train = disc_optimizer.apply_gradients(disc_grads_and_vars)##
+        with tf.name_scope("generator_train"):
+            with tf.control_dependencies([self._disc_train]):
+                gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
+                gen_optimizer = tf.train.AdamOptimizer(learning_rate, momentum)
+                self._gen_train = gen_optimizer.minimize(self._gen_loss, var_list = gen_tvars)##
+                #gen_grads_and_vars = gen_optimizer.compute_gradients(gen_loss, var_list=gen_tvars)##
+                #gen_train = gen_optimizer.apply_gradients(gen_grads_and_vars)##
+
+        """EMA = tf.train.ExponentialMovingAverage(decay=0.99)
+        update_losses = EMA.apply([disc_loss, gen_loss_root, gen_loss_L1])
+
+        discrim_loss = EMA.average(disc_loss)
+        gen_GAN_loss = EMA.average(gen_loss_root)
+        gen_L1_loss=EMA.average(gen_loss_L1)
+
+        train_group = tf.group(update_losses, incr_global_step, gen_train)
         
-        tf.summary.scalar("disc_loss", self.disc_loss)
-        tf.summary.scalar("gen_loss_root", self.gen_loss_root)
-        tf.summary.scalar("gen_loss_L1", self.gen_loss_L1)
+        
+        tf.summary.scalar("disc_loss", discrim_loss)
+        tf.summary.scalar("gen_loss_GAN", gen_GAN_loss)
+        tf.summary.scalar("gen_loss_L1", gen_L1_loss) """###
+        tf.summary.scalar("disc_loss", self._disc_loss)
+        tf.summary.scalar("disc_real_loss", disc_loss_real)
+        tf.summary.scalar("disc_fake_loss", disc_loss_fake)
+        tf.summary.scalar("gen_loss", self._gen_loss)
+        tf.summary.scalar("gen_loss_GAN", gen_loss_root)
+        tf.summary.scalar("gen_loss_L1", gen_loss_L1)
         tf.summary.scalar("learning_rate", learning_rate)
+
         if test_data is not None:
             tensor_gan_loss = tf.placeholder( shape = (), dtype = tf.float32)
             tensor_l1_loss = tf.placeholder( shape = (), dtype = tf.float32)
@@ -1272,14 +1385,6 @@ class build_refine_model(object):
         self._summary_op = tf.summary.merge_all()
         with tf.name_scope("parameter_count"):
             parameter_count = tf.reduce_sum([tf.reduce_prod(tf.shape(v)) for v in tf.trainable_variables()])
-
-        """#self._refiner_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = "graph_refiner")
-        self._saver = tf.train.Saver(max_to_keep = 1)
-
-        self._premodel_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = "deeplab_v2")
-        self._saver_premodel = tf.train.Saver(self._premodel_variables)"""
-
-        
 
         with tf.Session() as sess:
             print("parameter_count: ", sess.run(parameter_count))
@@ -1309,7 +1414,19 @@ class build_refine_model(object):
 
             verification_input = sess.run( self._predictor, feed_dict = { self._x: verification_x, self._is_trains: False})
            
-            verification_pr, error_rate = self.output_minibatch_stats( sess, self.disc_loss, self.gen_loss_root, self.gen_loss_L1, None, verification_input, verification_y, True)
+            """fetches = {"disc_loss": discrim_loss,
+                       "gen_loss_GAN": gen_GAN_loss,
+                       "gen_loss_L1": gen_L1_loss,
+                       "gen_out": self._gen_out}""" ###
+            fetches = {"disc_loss_real": disc_loss_real,
+                       "disc_loss_fake": disc_loss_fake,
+                       "disc_loss": self._disc_loss,
+                       "gen_loss_GAN": gen_loss_root,
+                       "gen_loss_L1": gen_loss_L1,
+                       "gen_loss": self._gen_loss,
+                       "gen_out": self._gen_out}
+
+            verification_pr, error_rate = self.output_minibatch_stats( sess, fetches, None, verification_input, verification_y, True)
             data.save_prediction_img( verification_path, "_init", verification_input, verification_y, verification_pr)
 
             batch_img = np.ndarray( shape = ( ( batch_size,) + self._input_HW + ( self._num_channel,)), dtype = np.float32)
@@ -1317,7 +1434,9 @@ class build_refine_model(object):
             batch_fname = []
 
             for epoch in range(epochs):
-                total_disc_loss = 0.0
+                total_disc_realloss = 0.0
+                total_disc_fakeloss = 0.0
+                total_gen_loss = 0.0
                 total_gen_gan_loss = 0.0
                 total_gen_l1_loss = 0.0
                 for step in range( ( epoch * max_iter), ( ( epoch + 1) * max_iter)):
@@ -1333,25 +1452,67 @@ class build_refine_model(object):
                     batch_input = sess.run( (self._predictor), feed_dict = {self._x: batch_img, self._is_trains: False})
 
                     # Feed the initial segmentation result from DeepLab to refinement GAN
-                    _, disc_cost, gen_cost_root, gen_cost_l1 = sess.run( ( self.train_group, self.disc_loss, self.gen_loss_root, self.gen_loss_L1), feed_dict = {self._inputs: batch_input,
-                                                                                                                                                                 self._targets: batch_y,
-                                                                                                                                                                 self._keep_probs: np.float(1),
-                                                                                                                                                                 self._is_train: True})
+                    ####################################################
+                    # train Discriminator
+                    fetches = {"train": self._disc_train,
+                               "global_step": global_step,
+                               "disc_loss": self._disc_loss,
+                               "disc_loss_real": disc_loss_real,
+                               "disc_loss_fake": disc_loss_fake,}
+                    results = sess.run( fetches, feed_dict = {self._inputs: batch_input,
+                                                              self._targets: batch_y,
+                                                              self._keep_probs: np.float(1),
+                                                              self._is_train: True})
+                    total_disc_realloss += results["disc_loss_real"]
+                    total_disc_fakeloss += results["disc_loss_fake"]
+
+                    # train Generator
+                    fetches = {"train": self._gen_train,
+                               "global_step": global_step,
+                               "gen_loss": self._gen_loss,
+                               "gen_loss_GAN": gen_loss_root,
+                               "gen_loss_L1": gen_loss_L1}
+                    results = sess.run( fetches, feed_dict = {self._inputs: batch_input,
+                                                              self._targets: batch_y,
+                                                              self._keep_probs: np.float(1),
+                                                              self._is_train: True})
+
+                    total_gen_loss += results["gen_loss"]
+                    total_gen_gan_loss += results["gen_loss_GAN"]
+                    total_gen_l1_loss += results["gen_loss_L1"]
+                    ####################################################
 
                     if step % display_step == 0:
-                        self.output_minibatch_stats( sess, self.disc_loss, self.gen_loss_root, self.gen_loss_L1, start_iter + step, batch_input, batch_y)
+                        fetches = {"disc_loss_real": disc_loss_real,
+                                   "disc_loss_fake": disc_loss_fake,
+                                   "disc_loss": self._disc_loss,
+                                   "gen_loss_GAN": gen_loss_root,
+                                   "gen_loss_L1": gen_loss_L1,
+                                   "gen_loss": self._gen_loss,
+                                   "gen_out": self._gen_out}
+                        self.output_minibatch_stats( sess, fetches, start_iter + step, batch_input, batch_y)
                         
-                    total_disc_loss += disc_cost
-                    total_gen_gan_loss += gen_cost_root
-                    total_gen_l1_loss += gen_cost_l1
+                    
 
+                logger.info( "Epoch {:}, Average real disc loss: {:.4f}, fake disc loss: {:.4f}, gen_loss: {:.4f}, gan loss: {:.4f}, l1 loss: {:.4f}".format( epoch, ( total_disc_realloss / max_iter), ( total_disc_fakeloss / max_iter), ( total_gen_loss / max_iter), ( total_gen_gan_loss / max_iter), ( total_gen_l1_loss / max_iter)))
 
-                logger.info( "Epoch {:}, Average disc loss: {:.4f}, Average gan loss: {:.4f}, Average l1 loss: {:.4f}".format( epoch, ( total_disc_loss / max_iter), ( total_gen_gan_loss / max_iter), ( total_gen_l1_loss / max_iter)))
-
-                verification_pr, error_rate = self.output_minibatch_stats( sess, self.disc_loss, self.gen_loss_root, self.gen_loss_L1, None, verification_input, verification_y, True)
+                fetches = {"disc_loss_real": disc_loss_real,
+                           "disc_loss_fake": disc_loss_fake,
+                           "disc_loss": self._disc_loss,
+                           "gen_loss_GAN": gen_loss_root,
+                           "gen_loss_L1": gen_loss_L1,
+                           "gen_loss": self._gen_loss,
+                           "gen_out": self._gen_out}
+                verification_pr, error_rate = self.output_minibatch_stats( sess, fetches, None, verification_input, verification_y, True)
                 data.save_prediction_img( verification_path, "epoch_%s" % epoch, verification_input, verification_y, verification_pr)
 
-                error_rate, cm, test_gan_loss, test_l1_loss = self.generator_output_test( sess, self.gen_loss_root, self.gen_loss_L1, test_data)
+                fetches = {"disc_loss": self._disc_loss,
+                           "gen_loss_GAN": gen_loss_root,
+                           "gen_loss_L1": gen_loss_L1,
+                           "gen_loss": self._gen_loss,
+                           "gen_out": self._gen_out}
+
+                error_rate, cm, test_gan_loss, test_l1_loss = self.generator_output_test( sess, fetches, test_data)
 
                 sm_feed_dict = {self._inputs: batch_input, self._targets: batch_y, self._keep_probs: np.float(1), self._is_train: False}
                 if test_data is not None:
@@ -1428,24 +1589,23 @@ class build_refine_model(object):
         save_path = self._saver.save( sess, os.path.join( model_path, temp), iter)
         return save_path
 
-    def output_minibatch_stats(self, sess, disc_loss, gen_loss_root, gen_loss_L1, step, batch_x, batch_y, is_verification = False):
+    def output_minibatch_stats(self, sess, fetches, step, batch_x, batch_y, is_verification = False):
         
-        disc_cost, gen_cost_root, gen_cost_l1, pr = sess.run([ disc_loss, gen_loss_root, gen_loss_L1, self._gen_out], feed_dict = {self._inputs: batch_x,
-                                                                                                                                   self._targets: batch_y,
-                                                                                                                                   self._keep_probs: np.float(1),
-                                                                                                                                   self._is_train: False})
-        error_rate = 100.0 - ( 100.0 * np.sum( np.argmax( pr, 3) == np.argmax( batch_y, 3)) / ( pr.shape[ 0] * pr.shape[ 1] * pr.shape[ 2]))
+        results = sess.run(fetches, feed_dict = {self._inputs: batch_x,
+                                                 self._targets: batch_y,
+                                                 self._keep_probs: np.float(1),
+                                                 self._is_train: False})
+
+        error_rate = 100.0 - ( 100.0 * np.sum( np.argmax( results["gen_out"], 3) == np.argmax( batch_y, 3)) / ( results["gen_out"].shape[ 0] * results["gen_out"].shape[ 1] * results["gen_out"].shape[ 2]))
 
         if is_verification:
-            
-            logger.info( "Verification error= {:.2f}%, gen_gan_loss= {:.4f}, gen_l1_loss= {:.4f}".format( error_rate, gen_cost_root, gen_cost_l1))
-
-            return pr, error_rate
+            logger.info( "Verification error= {:.2f}%, gen_loss= {:.4f}, gen_gan_loss= {:.4f}, gen_l1_loss= {:.4f}".format( error_rate, results["gen_loss"], results["gen_loss_GAN"], results["gen_loss_L1"]))
+            return results["gen_out"], error_rate
         else:
-            logger.info( "Iter {:}, Minibatch disc_Loss= {:.4f}, Minibatch gen_GAN_Loss= {:.4f}, Minibatch gen_L1_Loss= {:.4f}%".format( step, disc_cost, gen_cost_root, gen_cost_l1))
-            return pr
+            logger.info( "Iter {:}, Minibatch disc_Loss= {:.4f}, realLoss= {:.4f}, fakeLoss= {:.4f}, gen_Loss= {:.4f}, GAN_Loss= {:.4f}, L1_Loss= {:.4f}".format( step, results["disc_loss"], results["disc_loss_real"], results["disc_loss_fake"], results["gen_loss"], results["gen_loss_GAN"], results["gen_loss_L1"]))
+            return results["gen_out"]
 
-    def generator_output_test( self, sess, gan_cost, l1_cost, data):
+    def generator_output_test( self, sess, fetches, data):
                 
         total_pixel_error = 0.
         
@@ -1463,14 +1623,14 @@ class build_refine_model(object):
 
             input0 = sess.run( (self._predictor), feed_dict = { self._x: x0, self._is_trains: False})
 
-            gan_loss, l1_loss, pr = sess.run( [ gan_cost, l1_cost, self._gen_out], feed_dict = {self._inputs: input0,
-                                                                                                self._targets: y0,
-                                                                                                self._keep_probs: np.float(1),
-                                                                                                self._is_train: False})
+            results = sess.run( fetches, feed_dict = {self._inputs: input0,
+                                                      self._targets: y0,
+                                                      self._keep_probs: np.float(1),
+                                                      self._is_train: False})
             
-            total_gan_loss += gan_loss
-            total_l1_loss += l1_loss
-            argmax_pr = np.argmax( pr, 3)
+            total_gan_loss += results["gen_loss_GAN"]
+            total_l1_loss += results["gen_loss_L1"]
+            argmax_pr = np.argmax( results["gen_out"], 3)
             argmax_gt = np.argmax( y0, 3)
             argmax_pr_ncs = []
             argmax_gt_ncs = []
@@ -1498,7 +1658,7 @@ class build_refine_model(object):
                     cm_val = np.sum( np.logical_and( argmax_gt_ncs[ nc_gt], argmax_pr_ncs[ nc_pr]))
                     confusion_matrix_by_class[ nc_gt][ nc_pr] += cm_val
 
-            pixel_error = 100.0 * np.count_nonzero( argmax_pr != argmax_gt) / ( 1 * pr.shape[ 1] * pr.shape[ 2])
+            pixel_error = 100.0 * np.count_nonzero( argmax_pr != argmax_gt) / ( 1 * results["gen_out"].shape[ 1] * results["gen_out"].shape[ 2])
             total_pixel_error += pixel_error
            
         formatter = '[' + ( "{:6d}," * data.num_class)[ : -1] + ']'
