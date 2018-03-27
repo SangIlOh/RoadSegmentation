@@ -98,7 +98,7 @@ def bias_variable( name, shape, value = 0.1):
     initial = tf.constant( value, shape = shape, dtype = tf.float32)
     return tf.Variable( initial, name = name)
 
-def build_generator(inputs, is_training, weights, biases, keep_prob, num_channel, output_HW):
+def build_generator(inputs, is_training, weights, biases, num_channel, output_HW):
     ## unet params
     num_layer = 7
     num_feature_root = 64
@@ -244,7 +244,6 @@ class build_refine_model(object):
             # input for DeepLab
             with tf.name_scope( "input"):
                 self._x = tf.placeholder( dtype = tf.float32, shape = [ None, self._input_HW[0], self._input_HW[ 1], self._num_channel], name = "x")
-                self._y = tf.placeholder( dtype = tf.float32, shape = [ None, output_HW[ 0], output_HW[ 1], self._num_class], name = "y")
                 self._is_trains = tf.placeholder( dtype = tf.bool, shape = (), name = "is_trains")
 
             self._weights = []
@@ -1108,7 +1107,6 @@ class build_refine_model(object):
             with tf.name_scope( "input_refiner"):
                 self._inputs = tf.placeholder( dtype = tf.float32, shape = [ None, self._input_HW[ 0], self._input_HW[ 1], self._num_class], name = "inputs")
                 self._targets = tf.placeholder( dtype = tf.float32, shape = [ None, self._output_HW[ 0], self._output_HW[ 1], self._num_class], name = "targets")
-                self._keep_probs = tf.placeholder( dtype = tf.float32, name = "keep_probs")
                 self._is_train = tf.placeholder( dtype = tf.bool, shape = (), name = "is_train")
 
             #self._inputs = tf.identity(self._predictor)
@@ -1118,7 +1116,7 @@ class build_refine_model(object):
                 gen_inputs = tf.add(self._inputs, conv_gen, name = "gen_inputs")
                 self._weights_gan.append(w_gen)
 
-                self._gen_out, self._weights_gan, self._biases_gan = build_generator(gen_inputs, self._is_train, self._weights_gan, self._biases_gan, self._keep_probs, gen_inputs.get_shape()[3].value, self._output_HW)
+                self._gen_out, self._weights_gan, self._biases_gan = build_generator(gen_inputs, self._is_train, self._weights_gan, self._biases_gan, gen_inputs.get_shape()[3].value, self._output_HW)
                 #self._gen_out = self.pixel_wise_softmax_2( self._gen_out)
 
             with tf.name_scope("real_discriminator"):
@@ -1129,7 +1127,8 @@ class build_refine_model(object):
                 with tf.variable_scope("discriminator", reuse = True):
                     self._disc_pred_4fake, self._disc_logit_4fake, self._weights_gan = build_discriminator(self._x, self._gen_out, self._weights_gan, self._is_train)
         
-        self._saver = tf.train.Saver(max_to_keep = None)
+        self._rGAN_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope = "refine_GAN")
+        self._saver = tf.train.Saver(self._rGAN_variables)
 
     def pixel_wise_softmax_2( self, output_map):
         tensor_max = tf.tile( tf.reduce_max( output_map, 3, keepdims = True), [ 1, 1, 1, tf.shape( output_map)[ 3]])
@@ -1224,11 +1223,12 @@ class build_refine_model(object):
             # minimizing -tf.log will try to get inputs to 1
             # predict_real => 1
             # predict_fake => 0
-            #disc_loss = tf.reduce_mean(-(tf.log(self._disc_pred_4real + (1e-12)) + tf.log(1 - self._disc_pred_4fake + (1e-12))))##
-            #disc_loss = tf.reduce_mean(-(tf.log(self._disc_pred_4real) + tf.log(1 - self._disc_pred_4fake)))##
-            disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = self._disc_logit_4real, labels = tf.ones_like(self._disc_pred_4real)))
+            disc_loss_real = tf.log(self._disc_pred_4real + (1e-12))
+            disc_loss_fake = tf.log(1 - self._disc_pred_4fake + (1e-12))
+            self._disc_loss = tf.reduce_mean(-(disc_loss_real + disc_loss_fake))##
+            """disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = self._disc_logit_4real, labels = tf.ones_like(self._disc_pred_4real)))
             disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = self._disc_logit_4fake, labels = tf.zeros_like(self._disc_pred_4fake)))
-            self._disc_loss = disc_loss_real + disc_loss_fake
+            self._disc_loss = disc_loss_real + disc_loss_fake"""
         with tf.name_scope("generator_loss"):
             #gen_loss_root = tf.reduce_mean(-tf.log(self._disc_pred_4fake + (1e-12)))##
             #gen_loss_root = tf.reduce_mean(-tf.log(self._disc_pred_4fake))
@@ -1259,13 +1259,13 @@ class build_refine_model(object):
 
         with tf.name_scope("discriminator_train"):
             disc_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
-            disc_optimizer = tf.train.AdamOptimizer(learning_rate, momentum)
+            disc_optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
             self._disc_train = disc_optimizer.minimize(self._disc_loss, var_list = disc_tvars)##
             disc_lrn = disc_optimizer._lr_t
         with tf.name_scope("generator_train"):
             with tf.control_dependencies([self._disc_train]):
                 gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
-                gen_optimizer = tf.train.AdamOptimizer(learning_rate, momentum)
+                gen_optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
                 self._gen_train = gen_optimizer.minimize(self._gen_loss, var_list = gen_tvars)##
                 gen_lrn = gen_optimizer._lr_t
 
@@ -1313,7 +1313,7 @@ class build_refine_model(object):
                 verification_x[ nb, :, :, :] = verification_x0
                 verification_y[ nb, :, :, :] = verification_y0
 
-            verification_input = sess.run( self._predictor, feed_dict = { self._x: verification_x, self._y: verification_y, self._is_trains: False})
+            verification_input = sess.run( self._predictor, feed_dict = { self._x: verification_x, self._is_trains: False})
            
             fetches = {"disc_loss_real": disc_loss_real,
                        "disc_loss_fake": disc_loss_fake,
@@ -1358,9 +1358,7 @@ class build_refine_model(object):
                                "disc_loss_fake": disc_loss_fake,}
                     results = sess.run( fetches, feed_dict = {self._x: batch_img,
                                                               self._inputs: batch_input,
-                                                              self._y: batch_y,
                                                               self._targets: batch_y,
-                                                              self._keep_probs: np.float(1),
                                                               self._is_train: True})
                     total_disc_realloss += results["disc_loss_real"]
                     total_disc_fakeloss += results["disc_loss_fake"]
@@ -1373,9 +1371,7 @@ class build_refine_model(object):
                                "gen_loss_seg": gen_loss_seg}
                     results = sess.run( fetches, feed_dict = {self._x: batch_img,
                                                               self._inputs: batch_input,
-                                                              self._y: batch_y,
                                                               self._targets: batch_y,
-                                                              self._keep_probs: np.float(1),
                                                               self._is_train: True})
 
                     total_gen_loss += results["gen_loss"]
@@ -1417,9 +1413,7 @@ class build_refine_model(object):
 
                 sm_feed_dict = {self._x: batch_img,
                                 self._inputs: batch_input,
-                                self._y: batch_y,
                                 self._targets: batch_y,
-                                self._keep_probs: np.float(1),
                                 self._is_train: False}
                 sm_feed_dict[tensor_gan_loss] = test_gan_loss
                 sm_feed_dict[tensor_l1_loss] = test_l1_loss
@@ -1456,7 +1450,6 @@ class build_refine_model(object):
             #response = sess.run( self._predictor_gen, feed_dict = { self._inputs: input, self._keep_probs : np.float32( 1), self._is_train: False})
             response = sess.run( self._gen_out, feed_dict = { self._x: img,
                                                              self._inputs: input,
-                                                             self._keep_probs : np.float32( 1),
                                                              self._is_train: False})
             
             return response
@@ -1497,9 +1490,7 @@ class build_refine_model(object):
         
         results = sess.run(fetches, feed_dict = {self._x: batch_x,
                                                  self._inputs: batch_input,
-                                                 self._y: batch_y,
                                                  self._targets: batch_y,
-                                                 self._keep_probs: np.float(1),
                                                  self._is_train: False})
 
         error_rate = 100.0 - ( 100.0 * np.sum( np.argmax( results["gen_out"], 3) == np.argmax( batch_y, 3)) / ( results["gen_out"].shape[ 0] * results["gen_out"].shape[ 1] * results["gen_out"].shape[ 2]))
@@ -1532,7 +1523,6 @@ class build_refine_model(object):
             results = sess.run( fetches, feed_dict = {self._x: x0,
                                                       self._inputs: input0,
                                                       self._targets: y0,
-                                                      self._keep_probs: np.float(1),
                                                       self._is_train: False})
             
             total_gan_loss += results["gen_loss_GAN"]
